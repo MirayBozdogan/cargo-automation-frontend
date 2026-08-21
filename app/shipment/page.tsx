@@ -54,6 +54,23 @@ export default function ShipmentsPage() {
         }
     };
 
+    const handleDeleteShipment = async (shipmentId: number) => {
+        if (!confirm("Bu gönderiyi silmek istediğinize emin misiniz?")) {
+            return;
+        }
+
+        try {
+            await api.delete(`/shipment/${shipmentId}`);
+
+            setShipments(prev =>
+                prev.filter(shipment => shipment.id !== shipmentId)
+            );
+
+        } catch (error) {
+            console.error("Gönderi silinemedi:", error);
+        }
+    };
+
     useEffect(() => {
         api
             .get<ShipmentPage>(`/shipment?page=${page}&size=5`)
@@ -65,6 +82,7 @@ export default function ShipmentsPage() {
                 console.error("Gönderiler alınamadı:", error);
             });
     }, [page]);
+
 
     return (
         <main>
@@ -131,6 +149,13 @@ export default function ShipmentsPage() {
                         <td>{shipment.weight}</td>
 
                         <td>{shipment.price}</td>
+
+                        <td>
+                            <button  className="delete-shipment-button"
+                                     onClick={() => handleDeleteShipment(shipment.id)}>
+                                Sil
+                            </button>
+                        </td>
                     </tr>
                 ))}
                 </tbody>

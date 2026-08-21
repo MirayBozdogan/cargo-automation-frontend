@@ -67,6 +67,7 @@ button {
   border-radius: 4px;
 }
 
+
 button:hover:not(:disabled) {
   background-color: #f0f0f0;
 }
@@ -120,4 +121,66 @@ main {
   color: #842029;
   background-color: #f8d7da;
   border-color: #f1aeb5;
+}
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.modalButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.deleteError {
+  color: red;
+  margin-top: 15px;
+}
+
+.shipment-container {
+  display: flex;
+  gap: 80px;
+}
+.customer-info input,select{
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  height: 35px;
+  background-color: #f9fafb;
+
+}
+.shipment-info input {
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  height: 35px;
+  background-color: #f9fafb;
+
+}
+.shipment-info button {
+  margin-top: 100px;
+  background-color: #374151;
+  border: 2px solid #374151;
+  color: white;
+}
+.shipment-info button:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
 }

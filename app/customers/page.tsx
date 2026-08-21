@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import axios from "axios";
 
 interface Customer {
     id: number;
@@ -13,6 +14,7 @@ interface Customer {
     tc: string;
     telNo: string;
 }
+
 interface CustomerPage {
     content: Customer[];
     totalPages: number;
@@ -25,6 +27,12 @@ export default function CustomersPage() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
+    const [customerToDelete, setCustomerToDelete] =
+        useState<Customer | null>(null);
+
+    const [deleteError, setDeleteError] = useState("");
+    const [isDeleting, setIsDeleting] = useState(false);
+
     useEffect(() => {
         api
             .get<CustomerPage>(`/customers?page=${page}&size=5`)
@@ -36,6 +44,40 @@ export default function CustomersPage() {
                 console.error("Müşteriler alınamadı:", error);
             });
     }, [page]);
+
+    const deleteCustomer = async () => {
+        if (!customerToDelete) {
+            return;
+        }
+
+        setIsDeleting(true);
+        setDeleteError("");
+
+        try {
+            await api.delete(`/customers/${customerToDelete.id}`);
+
+            setCustomers((prevCustomers) =>
+                prevCustomers.filter(
+                    (customer) => customer.id !== customerToDelete.id
+                )
+            );
+
+            setCustomerToDelete(null);
+        } catch (error: unknown) {
+            console.error("Müşteri silinemedi:", error);
+
+            if (axios.isAxiosError(error)) {
+                setDeleteError(
+                    error.response?.data?.message ||
+                    "Müşteri silinirken bir hata oluştu."
+                );
+            } else {
+                setDeleteError("Müşteri silinirken bir hata oluştu.");
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <main>
@@ -54,6 +96,9 @@ export default function CustomersPage() {
                     <th>Email</th>
                     <th>Telefon</th>
                     <th>Yaş</th>
+                    <th>Detay</th>
+                    <th>Düzenle</th>
+                    <th>Sil</th>
                 </tr>
                 </thead>
 
@@ -66,15 +111,28 @@ export default function CustomersPage() {
                         <td>{customer.email}</td>
                         <td>{customer.telNo}</td>
                         <td>{customer.age}</td>
+
                         <td>
                             <a href={`/customers/${customer.id}`}>
                                 Detay
                             </a>
                         </td>
+
                         <td>
                             <a href={`/customers/${customer.id}/edit`}>
                                 Düzenle
                             </a>
+                        </td>
+
+                        <td>
+                            <button
+                                onClick={() => {
+                                    setCustomerToDelete(customer);
+                                    setDeleteError("");
+                                }}
+                            >
+                                Sil
+                            </button>
                         </td>
                     </tr>
                 ))}
@@ -90,8 +148,8 @@ export default function CustomersPage() {
                 </button>
 
                 <span>
-          Sayfa {page + 1} / {totalPages}
-        </span>
+                    Sayfa {page + 1} / {totalPages}
+                </span>
 
                 <button
                     disabled={page + 1 >= totalPages}
@@ -100,6 +158,47 @@ export default function CustomersPage() {
                     Sonraki
                 </button>
             </div>
+
+            {customerToDelete && (
+                <div className="modalOverlay">
+                    <div className="modal">
+                        <h2>Müşteriyi Sil</h2>
+
+                        <p>
+                            <strong>
+                                {customerToDelete.name}{" "}
+                                {customerToDelete.surname}
+                            </strong>{" "}
+                            adlı müşteriyi silmek istediğinize emin misiniz?
+                        </p>
+
+                        {deleteError && (
+                            <p className="deleteError">
+                                {deleteError}
+                            </p>
+                        )}
+
+                        <div className="modalButtons">
+                            <button
+                                onClick={() => {
+                                    setCustomerToDelete(null);
+                                    setDeleteError("");
+                                }}
+                                disabled={isDeleting}
+                            >
+                                Vazgeç
+                            </button>
+
+                            <button
+                                onClick={deleteCustomer}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Siliniyor..." : "Sil"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }
