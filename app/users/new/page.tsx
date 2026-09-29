@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
 
-interface CustomerRequest {
+interface UserRequest {
     name: string;
     surname: string;
     email: string;
@@ -32,10 +32,10 @@ interface AddressRequest {
     districtId: number;
 }
 
-export default function NewCustomerPage() {
+export default function NewUserPage() {
     const router = useRouter();
 
-    const [form, setForm] = useState<CustomerRequest>({
+    const [form, setForm] = useState<UserRequest>({
         name: "",
         surname: "",
         email: "",
@@ -86,8 +86,8 @@ export default function NewCustomerPage() {
             });
     }, [address.cityId]);
 
-    // Müşteri inputlarını yönet
-    const handleCustomerChange = (
+    // Kullanıcı inputlarını yönet
+    const handleUserChange = (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
         const { name, value } = e.target;
@@ -122,14 +122,13 @@ export default function NewCustomerPage() {
         setErrorStatus(null);
 
         try {
-            // Önce müşteriyi oluştur
-            const customerResponse = await api.post(
-                "/customers",
+            // Önce kullanıcıyı oluştur
+            const userResponse = await api.post(
+                "/users",
                 form
             );
 
-            const customerId =
-                customerResponse.data.id;
+            const userId = userResponse.data.id;
 
             // Backend Integer beklediği için
             // text input değerlerini number'a çeviriyoruz.
@@ -143,12 +142,12 @@ export default function NewCustomerPage() {
 
             // Adresi oluştur
             await api.post(
-                `/customers/${customerId}/address`,
+                `/users/${userId}/address`,
                 addressData
             );
 
-            // Başarılıysa müşteriler sayfasına git
-            router.push("/customers");
+            // Başarılıysa kullanıcılar sayfasına git
+            router.push("/users");
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
@@ -182,7 +181,7 @@ export default function NewCustomerPage() {
 
     return (
         <main>
-            <h1>Yeni Müşteri</h1>
+            <h1>Yeni Kullanıcı</h1>
 
             {/* Backend'den gelen hata */}
             {error && (
@@ -201,7 +200,7 @@ export default function NewCustomerPage() {
 
             <form onSubmit={handleSubmit}>
 
-                <h2>Müşteri Bilgileri</h2>
+                <h2>Kullanıcı Bilgileri</h2>
 
                 {/* Ad */}
                 <input
@@ -209,7 +208,7 @@ export default function NewCustomerPage() {
                     type="text"
                     placeholder="Ad"
                     value={form.name}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                     pattern="[A-Za-zÇĞİÖŞÜçğıöşü\s]+"
                     title="Ad sadece harflerden oluşmalıdır."
@@ -221,7 +220,7 @@ export default function NewCustomerPage() {
                     type="text"
                     placeholder="Soyad"
                     value={form.surname}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                     pattern="[A-Za-zÇĞİÖŞÜçğıöşü\s]+"
                     title="Soyad sadece harflerden oluşmalıdır."
@@ -233,7 +232,7 @@ export default function NewCustomerPage() {
                     type="email"
                     placeholder="E-posta"
                     value={form.email}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                 />
 
@@ -243,7 +242,7 @@ export default function NewCustomerPage() {
                     type="number"
                     placeholder="Yaş"
                     value={form.age}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                     min={18}
                 />
@@ -254,7 +253,7 @@ export default function NewCustomerPage() {
                     type="text"
                     placeholder="TC"
                     value={form.tc}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                     pattern="[0-9]{11}"
                     maxLength={11}
@@ -267,7 +266,7 @@ export default function NewCustomerPage() {
                     type="text"
                     placeholder="Telefon"
                     value={form.telNo}
-                    onChange={handleCustomerChange}
+                    onChange={handleUserChange}
                     required
                     pattern="05[0-9]{9}"
                     maxLength={11}
@@ -369,7 +368,7 @@ export default function NewCustomerPage() {
                 />
 
                 <button type="submit">
-                    Müşteri ve Adres Ekle
+                    Kullanıcı ve Adres Ekle
                 </button>
 
             </form>

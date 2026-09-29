@@ -1,9 +1,12 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+
+interface JwtPayload {
+    id: number;
+}
 
 export default function LoginPage() {
     const router = useRouter();
@@ -22,7 +25,11 @@ export default function LoginPage() {
 
             localStorage.setItem("token", token);
 
-            router.push("/customers/[id]/shipment");
+            const payload: JwtPayload = JSON.parse(
+                atob(token.split(".")[1])
+            );
+
+            router.push(`/users`);
         } catch (error) {
             console.error(error);
             alert("Email veya şifre hatalı.");
@@ -30,7 +37,7 @@ export default function LoginPage() {
     };
 
     const handleRegister = () => {
-        router.push("/customers/new");
+        router.push("/users/new");
     };
 
     return (
@@ -61,4 +68,3 @@ export default function LoginPage() {
         </main>
     );
 }
-

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
 
-interface CustomerRequest {
+interface UserRequest {
     name: string;
     surname: string;
     email: string;
@@ -14,13 +15,13 @@ interface CustomerRequest {
     telNo: string;
 }
 
-export default function EditCustomerPage() {
+export default function EditUserPage() {
     const params = useParams();
     const router = useRouter();
 
-    const customerId = params.id as string;
+    const userId = params.id as string;
 
-    const [form, setForm] = useState<CustomerRequest>({
+    const [form, setForm] = useState<UserRequest>({
         name: "",
         surname: "",
         email: "",
@@ -35,17 +36,17 @@ export default function EditCustomerPage() {
 
     const [loading, setLoading] = useState(true);
 
-    // Müşteriyi getir
+    // Kullanıcıyı getir
     useEffect(() => {
-        api.get<CustomerRequest>(
-            `/customers/${customerId}`
+        api.get<UserRequest>(
+            `/users/${userId}`
         )
             .then((response) => {
                 setForm(response.data);
             })
             .catch((error) => {
                 console.error(
-                    "Müşteri alınamadı:",
+                    "Kullanıcı alınamadı:",
                     error
                 );
 
@@ -56,14 +57,14 @@ export default function EditCustomerPage() {
 
                     setError(
                         error.response?.data?.message ||
-                        "Müşteri alınamadı."
+                        "Kullanıcı alınamadı."
                     );
                 }
             })
             .finally(() => {
                 setLoading(false);
             });
-    }, [customerId]);
+    }, [userId]);
 
     // Input değişiklikleri
     const handleChange = (
@@ -91,11 +92,11 @@ export default function EditCustomerPage() {
 
         try {
             await api.put(
-                `/customers/${customerId}`,
+                `/users/${userId}`,
                 form
             );
 
-            router.push("/customers");
+            router.push("/users");
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
@@ -105,7 +106,7 @@ export default function EditCustomerPage() {
 
                 setError(
                     error.response?.data?.message ||
-                    "Müşteri güncellenemedi."
+                    "Kullanıcı güncellenemedi."
                 );
 
                 console.error(
@@ -122,12 +123,16 @@ export default function EditCustomerPage() {
     };
 
     if (loading) {
-        return <p>Müşteri bilgileri yükleniyor...</p>;
+        return (
+            <p>
+                Kullanıcı bilgileri yükleniyor...
+            </p>
+        );
     }
 
     return (
         <main>
-            <h1>Müşteri Düzenle</h1>
+            <h1>Kullanıcı Düzenle</h1>
 
             {error && (
                 <div
@@ -217,7 +222,7 @@ export default function EditCustomerPage() {
                 <button
                     type="button"
                     onClick={() =>
-                        router.push("/customers")
+                        router.push("/users")
                     }
                 >
                     İptal
@@ -227,3 +232,4 @@ export default function EditCustomerPage() {
         </main>
     );
 }
+

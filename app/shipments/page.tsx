@@ -272,7 +272,7 @@ export default function ShipmentPage() {
 
             <div className="shipment-container">
 
-                <div className="customer-info">
+                <div className="user-info">
 
                     {/* GÖNDERİCİ */}
 

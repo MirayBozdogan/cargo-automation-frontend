@@ -5,7 +5,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import axios from "axios";
 
-interface Customer {
+interface User {
     id: number;
     name: string;
     surname: string;
@@ -15,38 +15,38 @@ interface Customer {
     telNo: string;
 }
 
-interface CustomerPage {
-    content: Customer[];
+interface UserPage {
+    content: User[];
     totalPages: number;
     totalElements: number;
     number: number;
 }
 
-export default function CustomersPage() {
-    const [customers, setCustomers] = useState<Customer[]>([]);
+export default function UsersPage() {
+    const [users, setUsers] = useState<User[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
-    const [customerToDelete, setCustomerToDelete] =
-        useState<Customer | null>(null);
+    const [userToDelete, setUserToDelete] =
+        useState<User | null>(null);
 
     const [deleteError, setDeleteError] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         api
-            .get<CustomerPage>(`/customers?page=${page}&size=5`)
+            .get<UserPage>(`/users?page=${page}&size=5`)
             .then((response) => {
-                setCustomers(response.data.content);
+                setUsers(response.data.content);
                 setTotalPages(response.data.totalPages);
             })
             .catch((error) => {
-                console.error("Müşteriler alınamadı:", error);
+                console.error("Kullanıcılar alınamadı:", error);
             });
     }, [page]);
 
-    const deleteCustomer = async () => {
-        if (!customerToDelete) {
+    const deleteUser = async () => {
+        if (!userToDelete) {
             return;
         }
 
@@ -54,25 +54,25 @@ export default function CustomersPage() {
         setDeleteError("");
 
         try {
-            await api.delete(`/customers/${customerToDelete.id}`);
+            await api.delete(`/users/${userToDelete.id}`);
 
-            setCustomers((prevCustomers) =>
-                prevCustomers.filter(
-                    (customer) => customer.id !== customerToDelete.id
+            setUsers((prevUsers) =>
+                prevUsers.filter(
+                    (user) => user.id !== userToDelete.id
                 )
             );
 
-            setCustomerToDelete(null);
+            setUserToDelete(null);
         } catch (error: unknown) {
-            console.error("Müşteri silinemedi:", error);
+            console.error("Kullanıcı silinemedi:", error);
 
             if (axios.isAxiosError(error)) {
                 setDeleteError(
                     error.response?.data?.message ||
-                    "Müşteri silinirken bir hata oluştu."
+                    "Kullanıcı silinirken bir hata oluştu."
                 );
             } else {
-                setDeleteError("Müşteri silinirken bir hata oluştu.");
+                setDeleteError("Kullanıcı silinirken bir hata oluştu.");
             }
         } finally {
             setIsDeleting(false);
@@ -81,10 +81,10 @@ export default function CustomersPage() {
 
     return (
         <main>
-            <h1>Müşteriler</h1>
+            <h1>Kullanıcılar</h1>
 
-            <Link href="/customers/new">
-                <button>Yeni Müşteri</button>
+            <Link href="/users/new">
+                <button>Yeni Kullanıcı</button>
             </Link>
 
             <table>
@@ -103,23 +103,23 @@ export default function CustomersPage() {
                 </thead>
 
                 <tbody>
-                {customers.map((customer) => (
-                    <tr key={customer.id}>
-                        <td>{customer.id}</td>
-                        <td>{customer.name}</td>
-                        <td>{customer.surname}</td>
-                        <td>{customer.email}</td>
-                        <td>{customer.telNo}</td>
-                        <td>{customer.age}</td>
+                {users.map((user) => (
+                    <tr key={user.id}>
+                        <td>{user.id}</td>
+                        <td>{user.name}</td>
+                        <td>{user.surname}</td>
+                        <td>{user.email}</td>
+                        <td>{user.telNo}</td>
+                        <td>{user.age}</td>
 
                         <td>
-                            <a href={`/customers/${customer.id}`}>
+                            <a href={`/users/${user.id}`}>
                                 Detay
                             </a>
                         </td>
 
                         <td>
-                            <a href={`/customers/${customer.id}/edit`}>
+                            <a href={`/users/${user.id}/edit`}>
                                 Düzenle
                             </a>
                         </td>
@@ -127,7 +127,7 @@ export default function CustomersPage() {
                         <td>
                             <button
                                 onClick={() => {
-                                    setCustomerToDelete(customer);
+                                    setUserToDelete(user);
                                     setDeleteError("");
                                 }}
                             >
@@ -159,17 +159,17 @@ export default function CustomersPage() {
                 </button>
             </div>
 
-            {customerToDelete && (
+            {userToDelete && (
                 <div className="modalOverlay">
                     <div className="modal">
-                        <h2>Müşteriyi Sil</h2>
+                        <h2>Kullanıcıyı Sil</h2>
 
                         <p>
                             <strong>
-                                {customerToDelete.name}{" "}
-                                {customerToDelete.surname}
+                                {userToDelete.name}{" "}
+                                {userToDelete.surname}
                             </strong>{" "}
-                            adlı müşteriyi silmek istediğinize emin misiniz?
+                            adlı kullanıcıyı silmek istediğinize emin misiniz?
                         </p>
 
                         {deleteError && (
@@ -181,7 +181,7 @@ export default function CustomersPage() {
                         <div className="modalButtons">
                             <button
                                 onClick={() => {
-                                    setCustomerToDelete(null);
+                                    setUserToDelete(null);
                                     setDeleteError("");
                                 }}
                                 disabled={isDeleting}
@@ -190,7 +190,7 @@ export default function CustomersPage() {
                             </button>
 
                             <button
-                                onClick={deleteCustomer}
+                                onClick={deleteUser}
                                 disabled={isDeleting}
                             >
                                 {isDeleting ? "Siliniyor..." : "Sil"}

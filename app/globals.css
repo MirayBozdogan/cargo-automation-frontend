@@ -160,7 +160,7 @@ main {
   display: flex;
   gap: 80px;
 }
-.customer-info input,select{
+.user-info input,select{
   border: 2px solid #d1d5db;
   border-radius: 8px;
   height: 35px;
