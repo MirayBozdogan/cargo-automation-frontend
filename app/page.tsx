@@ -4,10 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 
-interface JwtPayload {
-    id: number;
-}
-
 export default function LoginPage() {
     const router = useRouter();
 
@@ -25,10 +21,6 @@ export default function LoginPage() {
 
             localStorage.setItem("token", token);
 
-            const payload: JwtPayload = JSON.parse(
-                atob(token.split(".")[1])
-            );
-
             router.push(`/users`);
         } catch (error) {
             console.error(error);
@@ -37,7 +29,7 @@ export default function LoginPage() {
     };
 
     const handleRegister = () => {
-        router.push("/users/new");
+        router.push("/register");
     };
 
     return (

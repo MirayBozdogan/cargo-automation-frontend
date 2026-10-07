@@ -9,7 +9,7 @@ api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
 
-        if (token) {
+        if (token && !config.url?.startsWith("/auth/")) {
             config.headers.Authorization = `Bearer ${token}`;
         }
 
@@ -21,4 +21,3 @@ api.interceptors.request.use(
 );
 
 export default api;
-

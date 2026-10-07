@@ -83,8 +83,8 @@ export default function UsersPage() {
         <main>
             <h1>Kullanıcılar</h1>
 
-            <Link href="/users/new">
-                <button>Yeni Kullanıcı</button>
+            <Link href="/register">
+                <button>Müşteri Kaydı</button>
             </Link>
 
             <table>
