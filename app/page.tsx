@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
+    const searchParams = useSearchParams();
+    const sessionExpired = searchParams.get("session") === "expired";
 
     const handleLogin = async () => {
         try {
@@ -21,7 +24,7 @@ export default function LoginPage() {
 
             localStorage.setItem("token", token);
 
-            router.push(`/users`);
+            router.replace("/profile");
         } catch (error) {
             console.error(error);
             alert("Email veya şifre hatalı.");
@@ -35,6 +38,7 @@ export default function LoginPage() {
     return (
         <main>
             <h1>Giriş Yap</h1>
+            {sessionExpired && <p role="status">Oturumun sona erdi. Lütfen yeniden giriş yap.</p>}
 
             <input
                 type="email"
@@ -59,4 +63,10 @@ export default function LoginPage() {
             </button>
         </main>
     );
+}
+
+export default function LoginPage() {
+    return <Suspense fallback={<main><p>Giriş ekranı yükleniyor...</p></main>}>
+        <LoginForm />
+    </Suspense>;
 }
