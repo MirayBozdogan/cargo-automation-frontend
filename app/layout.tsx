@@ -16,10 +16,9 @@ export default function RootLayout({
       <html lang="tr">
       <body>
       <nav>
-        <Link href="/">Ana Sayfa</Link>
-        <Link href="/users">Müşteriler</Link>
-        <Link href="/addresses">Adresler</Link>
-        <Link href="/shipment">Gönderiler</Link>
+        <Link href="/">Giriş Yap</Link>
+        <Link href="/register">Kayıt Ol</Link>
+        <Link href="/profile">Profilim</Link>
       </nav>
 
       {children}
