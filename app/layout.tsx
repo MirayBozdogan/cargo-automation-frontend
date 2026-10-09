@@ -19,6 +19,7 @@ export default function RootLayout({
         <Link href="/">Giriş Yap</Link>
         <Link href="/register">Kayıt Ol</Link>
         <Link href="/profile">Profilim</Link>
+        <Link href="/addresses">Adreslerim</Link>
       </nav>
 
       {children}
