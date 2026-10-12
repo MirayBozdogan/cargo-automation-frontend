@@ -1,543 +1,119 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
 
-interface City {
-    id: number;
-    name: string;
-}
+interface User { id: number; name: string; surname: string }
+interface City { id: number; name: string }
+interface District { id: number; name: string; city: City }
+interface Address { id: number; neighborhood: string; city: City; district: District }
+interface ShipmentResponse { id: number; barcode: string; price: number }
+interface ManualAddress { cityId: string; districtId: string; address: string }
+const emptyAddress: ManualAddress = { cityId: "", districtId: "", address: "" };
 
-interface District {
-    id: number;
-    name: string;
+function AddressFields({ prefix, value, onChange, cities, districts }: {
+    prefix: string; value: ManualAddress; onChange: (value: ManualAddress) => void; cities: City[]; districts: District[];
+}) {
+    return <>
+        <label htmlFor={`${prefix}-city`}>Şehir</label>
+        <select id={`${prefix}-city`} required value={value.cityId} onChange={e => onChange({ ...value, cityId: e.target.value, districtId: "" })}>
+            <option value="">Şehir seç</option>{cities.map(city => <option key={city.id} value={city.id}>{city.name}</option>)}
+        </select>
+        <label htmlFor={`${prefix}-district`}>İlçe</label>
+        <select id={`${prefix}-district`} required disabled={!value.cityId} value={value.districtId} onChange={e => onChange({ ...value, districtId: e.target.value })}>
+            <option value="">İlçe seç</option>{districts.filter(d => String(d.city.id) === value.cityId).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <label htmlFor={`${prefix}-address`}>Açık adres</label>
+        <textarea id={`${prefix}-address`} required value={value.address} onChange={e => onChange({ ...value, address: e.target.value })} />
+    </>;
 }
-
-interface Price {
-    id: number;
-    minDesi: number;
-    maxDesi: number;
-    price: number;
-}
-
-interface ErrorResponse {
-    message: string;
-}
-
 export default function ShipmentPage() {
+    const router = useRouter();
+    const [user, setUser] = useState<User | null>(null);
     const [cities, setCities] = useState<City[]>([]);
-    const [senderDistricts, setSenderDistricts] = useState<District[]>([]);
-    const [receiverDistricts, setReceiverDistricts] = useState<District[]>([]);
-    const [prices, setPrices] = useState<Price[]>([]);
-
+    const [districts, setDistricts] = useState<District[]>([]);
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [senderAddressId, setSenderAddressId] = useState("");
+    const [sender, setSender] = useState(emptyAddress);
+    const [receiver, setReceiver] = useState(emptyAddress);
+    const [receiverName, setReceiverName] = useState("");
+    const [receiverSurname, setReceiverSurname] = useState("");
+    const [shipment, setShipment] = useState({ width: "", length: "", height: "", weight: "" });
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-
-    const [sender, setSender] = useState({
-        name: "",
-        surname: "",
-        city: "",
-        district: "",
-        address: ""
-    });
-
-    const [receiver, setReceiver] = useState({
-        name: "",
-        surname: "",
-        city: "",
-        district: "",
-        address: ""
-    });
-
-    const [shipment, setShipment] = useState({
-        width: "",
-        length: "",
-        height: "",
-        weight: ""
-    });
-
-    // Şehirleri ve fiyatları getir
+    const [created, setCreated] = useState<ShipmentResponse | null>(null);
     useEffect(() => {
-        api.get<City[]>("/city")
-            .then(res => setCities(res.data))
-            .catch(error =>
-                console.error("Şehirler alınamadı:", error)
-            );
-
-        api.get<Price[]>("/price")
-            .then(res => {
-                console.log("FİYATLAR:", res.data);
-                setPrices(res.data);
-            })
-    }, [shipment]);
-
-    // Gönderici ilçelerini getir
-    useEffect(() => {
-        const city = cities.find(
-            c => c.name === sender.city
-        );
-
-        if (!city) return;
-
-        api.get<District[]>(
-            `/district/city/${city.id}`
-        )
-            .then(res => setSenderDistricts(res.data))
-            .catch(error =>
-                console.error(
-                    "Gönderici ilçeleri alınamadı:",
-                    error
-                )
-            );
-    }, [sender.city, cities]);
-
-    // Alıcı ilçelerini getir
-    useEffect(() => {
-        const city = cities.find(
-            c => c.name === receiver.city
-        );
-
-        if (!city) return;
-
-        api.get<District[]>(
-            `/district/city/${city.id}`
-        )
-            .then(res => setReceiverDistricts(res.data))
-            .catch(error =>
-                console.error(
-                    "Alıcı ilçeleri alınamadı:",
-                    error
-                )
-            );
-    }, [receiver.city, cities]);
-
-    const validateForm = () => {
-        // GÖNDERİCİ KONTROLÜ
-
-        if (
-            !sender.name.trim() ||
-            !sender.surname.trim() ||
-            !sender.city ||
-            !sender.district ||
-            !sender.address.trim()
-        ) {
-            return "Gönderici bilgilerini eksiksiz doldurmalısınız.";
+        if (!localStorage.getItem("token")) { router.replace("/"); return; }
+        let active = true;
+        async function load() {
+            try {
+                const [me, cityResponse, districtResponse] = await Promise.all([
+                    api.get<User>("/users/me"), api.get<City[]>("/city"), api.get<District[]>("/district"),
+                ]);
+                const addressResponse = await api.get<Address[]>(`/users/${me.data.id}/address`);
+                if (active) { setUser(me.data); setCities(cityResponse.data); setDistricts(districtResponse.data); setAddresses(addressResponse.data); }
+            } catch { if (active) setError("Form bilgileri yüklenemedi. Sayfayı yenileyerek tekrar deneyebilirsin."); }
+            finally { if (active) setLoading(false); }
         }
-
-        // ALICI KONTROLÜ
-
-        if (
-            !receiver.name.trim() ||
-            !receiver.surname.trim() ||
-            !receiver.city ||
-            !receiver.district ||
-            !receiver.address.trim()
-        ) {
-            return "Alıcı bilgilerini eksiksiz doldurmalısınız.";
-        }
-
-        // ÖLÇÜ KONTROLÜ
-
-        if (
-            !shipment.width ||
-            !shipment.length ||
-            !shipment.height ||
-            !shipment.weight
-        ) {
-            return "En, boy, yükseklik ve ağırlık bilgilerini girmelisiniz.";
-        }
-
-        const width = Number(shipment.width);
-        const length = Number(shipment.length);
-        const height = Number(shipment.height);
-        const weight = Number(shipment.weight);
-
-        if (
-            width <= 0 ||
-            length <= 0 ||
-            height <= 0 ||
-            weight <= 0
-        ) {
-            return "En, boy, yükseklik ve ağırlık 0'dan büyük olmalıdır.";
-        }
-
-        // DESİ HESAPLAMA
-
-        const desi =
-            (width * length * height) / 3000;
-
-        const calculatedValue = Math.max(
-            desi,
-            weight
-        );
-
-        // FİYAT KONTROLÜ
-
-        const priceExists = prices.some(
-            price =>
-                calculatedValue >= price.minDesi &&
-                calculatedValue < price.maxDesi
-
-        );
-
-        console.log("Desi:", desi);
-        console.log("Hesaplanan değer:", calculatedValue);
-        console.log("Fiyatlar:", prices);
-
-        if (!priceExists) {
-            return "Hesaplanan değer için uygun bir fiyat bulunamadı.";
-        }
-
-        return null;
-    };
-
-    const createShipment = async () => {
+        void load(); return () => { active = false; };
+    }, [router]);
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (saving || !user || created) return;
         setError("");
-
-        // Backend'e gitmeden önce kontrol
-        const validationError = validateForm();
-
-        if (validationError) {
-            setError(validationError);
-            return;
+        if (!receiverName.trim() || !receiverSurname.trim() || !receiver.address.trim() || (!senderAddressId && !sender.address.trim())) {
+            setError("Ad, soyad ve adres alanları boş olamaz."); return;
         }
-
-        const data = {
-            width: Number(shipment.width),
-            length: Number(shipment.length),
-            height: Number(shipment.height),
-            weight: Number(shipment.weight),
-
-            senderName: sender.name,
-            senderSurname: sender.surname,
-            senderCity: sender.city,
-            senderDistrict: sender.district,
-            senderAddressText: sender.address,
-
-            receiverName: receiver.name,
-            receiverSurname: receiver.surname,
-            receiverCity: receiver.city,
-            receiverDistrict: receiver.district,
-            receiverAddressText: receiver.address
-        };
-
+        function manualAddress(value: ManualAddress) {
+            const city = cities.find(c => String(c.id) === value.cityId);
+            const district = districts.find(d => String(d.id) === value.districtId && d.city.id === city?.id);
+            if (!city || !district) throw new Error("Şehir ve ilçeyi seçmelisin.");
+            return { city: city.name, district: district.name, address: value.address.trim() };
+        }
+        setSaving(true);
         try {
-            await api.post("/shipment", data);
-
-            alert("Gönderi oluşturuldu.");
-
-            setSender({
-                name: "",
-                surname: "",
-                city: "",
-                district: "",
-                address: ""
+            const receiverAddress = manualAddress(receiver);
+            const senderAddress = senderAddressId ? null : manualAddress(sender);
+            const response = await api.post<ShipmentResponse>("/shipment", {
+                width: Number(shipment.width), length: Number(shipment.length), height: Number(shipment.height), weight: Number(shipment.weight),
+                ...(senderAddressId ? { senderAddressId: Number(senderAddressId) } : {
+                    senderCity: senderAddress?.city, senderDistrict: senderAddress?.district, senderAddressText: senderAddress?.address,
+                }),
+                receiverName: receiverName.trim(), receiverSurname: receiverSurname.trim(),
+                receiverCity: receiverAddress.city, receiverDistrict: receiverAddress.district, receiverAddressText: receiverAddress.address,
             });
-
-            setReceiver({
-                name: "",
-                surname: "",
-                city: "",
-                district: "",
-                address: ""
-            });
-
-            setShipment({
-                width: "",
-                length: "",
-                height: "",
-                weight: ""
-            });
-
-        } catch (error: unknown) {
-            console.error(
-                "Gönderi oluşturulamadı:",
-                error
-            );
-
-            if (axios.isAxiosError<ErrorResponse>(error)) {
-                setError(
-                    error.response?.data?.message ||
-                    "Gönderi oluşturulamadı."
-                );
-            } else {
-                setError("Beklenmeyen bir hata oluştu.");
-            }
-        }
-    };
-
-    return (
-        <main>
-            <h1>Gönderi Oluştur</h1>
-
-            <div className="shipment-container">
-
-                <div className="user-info">
-
-                    {/* GÖNDERİCİ */}
-
-                    <h2>Gönderici</h2>
-
-                    <input
-                        placeholder="Ad"
-                        value={sender.name}
-                        onChange={e =>
-                            setSender({
-                                ...sender,
-                                name: e.target.value
-                            })
-                        }
-                    />
-
-                    <input
-                        placeholder="Soyad"
-                        value={sender.surname}
-                        onChange={e =>
-                            setSender({
-                                ...sender,
-                                surname: e.target.value
-                            })
-                        }
-                    />
-
-                    <br />
-                    <br />
-
-                    <select
-                        value={sender.city}
-                        onChange={e =>
-                            setSender({
-                                ...sender,
-                                city: e.target.value,
-                                district: ""
-                            })
-                        }
-                    >
-                        <option value="">
-                            Şehir seç
-                        </option>
-
-                        {cities.map(city => (
-                            <option
-                                key={city.id}
-                                value={city.name}
-                            >
-                                {city.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={sender.district}
-                        disabled={!sender.city}
-                        onChange={e =>
-                            setSender({
-                                ...sender,
-                                district: e.target.value
-                            })
-                        }
-                    >
-                        <option value="">
-                            İlçe seç
-                        </option>
-
-                        {senderDistricts.map(
-                            district => (
-                                <option
-                                    key={district.id}
-                                    value={district.name}
-                                >
-                                    {district.name}
-                                </option>
-                            )
-                        )}
-                    </select>
-
-                    <input
-                        placeholder="Adres"
-                        value={sender.address}
-                        onChange={e =>
-                            setSender({
-                                ...sender,
-                                address: e.target.value
-                            })
-                        }
-                    />
-
-                    <br />
-                    <br />
-                    <br />
-                    <br />
-
-                    {/* ALICI */}
-
-                    <h2>Alıcı</h2>
-
-                    <input
-                        placeholder="Ad"
-                        value={receiver.name}
-                        onChange={e =>
-                            setReceiver({
-                                ...receiver,
-                                name: e.target.value
-                            })
-                        }
-                    />
-
-                    <input
-                        placeholder="Soyad"
-                        value={receiver.surname}
-                        onChange={e =>
-                            setReceiver({
-                                ...receiver,
-                                surname: e.target.value
-                            })
-                        }
-                    />
-
-                    <br />
-                    <br />
-
-                    <select
-                        value={receiver.city}
-                        onChange={e =>
-                            setReceiver({
-                                ...receiver,
-                                city: e.target.value,
-                                district: ""
-                            })
-                        }
-                    >
-                        <option value="">
-                            Şehir seç
-                        </option>
-
-                        {cities.map(city => (
-                            <option
-                                key={city.id}
-                                value={city.name}
-                            >
-                                {city.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={receiver.district}
-                        disabled={!receiver.city}
-                        onChange={e =>
-                            setReceiver({
-                                ...receiver,
-                                district: e.target.value
-                            })
-                        }
-                    >
-                        <option value="">
-                            İlçe seç
-                        </option>
-
-                        {receiverDistricts.map(
-                            district => (
-                                <option
-                                    key={district.id}
-                                    value={district.name}
-                                >
-                                    {district.name}
-                                </option>
-                            )
-                        )}
-                    </select>
-
-                    <input
-                        placeholder="Adres"
-                        value={receiver.address}
-                        onChange={e =>
-                            setReceiver({
-                                ...receiver,
-                                address: e.target.value
-                            })
-                        }
-                    />
-
-                </div>
-
-                <div className="shipment-info">
-
-                    {/* GÖNDERİ */}
-
-                    <h2>Gönderi Bilgileri</h2>
-
-                    <input
-                        type="number"
-                        placeholder="En"
-                        value={shipment.width}
-                        onChange={e =>
-                            setShipment({
-                                ...shipment,
-                                width: e.target.value
-                            })
-                        }
-                    />
-
-                    <input
-                        type="number"
-                        placeholder="Boy"
-                        value={shipment.length}
-                        onChange={e =>
-                            setShipment({
-                                ...shipment,
-                                length: e.target.value
-                            })
-                        }
-                    />
-
-                    <br />
-                    <br />
-
-                    <input
-                        type="number"
-                        placeholder="Yükseklik"
-                        value={shipment.height}
-                        onChange={e =>
-                            setShipment({
-                                ...shipment,
-                                height: e.target.value
-                            })
-                        }
-                    />
-
-                    <input
-                        type="number"
-                        placeholder="Ağırlık"
-                        value={shipment.weight}
-                        onChange={e =>
-                            setShipment({
-                                ...shipment,
-                                weight: e.target.value
-                            })
-                        }
-                    />
-
-                    <br />
-
-                    {error && (
-                        <p
-                            style={{
-                                color: "red",
-                                marginTop: "10px"
-                            }}
-                        >
-                            {error}
-                        </p>
-                    )}
-
-                    <button onClick={createShipment}>
-                        Gönderiyi Oluştur
-                    </button>
-
-                </div>
-
-            </div>
-        </main>
-    );
+            setCreated(response.data);
+        } catch (error) { setError(axios.isAxiosError<{ message: string }>(error)
+            ? error.response?.data?.message || "Gönderi oluşturulamadı." : error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu."); }
+        finally { setSaving(false); }
+    }
+    if (loading) return <main><p role="status">Gönderi formu yükleniyor...</p></main>;
+    if (!user) return <main><p role="alert">{error}</p></main>;
+    if (created) return <main><h1>Gönderi oluşturuldu</h1><p role="status">Gönderin kaydedildi.</p>
+        <Link href={`/users/${user.id}`}>Gönderilerimi görüntüle</Link></main>;
+    return <main><h1>Gönderi Oluştur</h1><form onSubmit={handleSubmit}>
+        <fieldset disabled={saving} className="registration-fields">
+            <h2>Gönderici</h2><p>{user.name} {user.surname}</p>
+            <label htmlFor="senderAddressId">Gönderici adresi</label>
+            <select id="senderAddressId" value={senderAddressId} onChange={e => setSenderAddressId(e.target.value)}>
+                <option value="">Adresi elle gir</option>{addresses.map(address => <option key={address.id} value={address.id}>
+                    {address.city.name} / {address.district.name} — {address.neighborhood}</option>)}
+            </select>
+            {!addresses.length && <p>Kayıtlı adresin yok. Adresi elle girebilir veya <Link href="/addresses">adres ekleyebilirsin</Link>.</p>}
+            {!senderAddressId && <AddressFields prefix="sender" value={sender} onChange={setSender} cities={cities} districts={districts} />}
+            <h2>Alıcı</h2><label htmlFor="receiverName">Ad</label>
+            <input id="receiverName" required value={receiverName} onChange={e => setReceiverName(e.target.value)} />
+            <label htmlFor="receiverSurname">Soyad</label><input id="receiverSurname" required value={receiverSurname} onChange={e => setReceiverSurname(e.target.value)} />
+            <AddressFields prefix="receiver" value={receiver} onChange={setReceiver} cities={cities} districts={districts} />
+            <h2>Ölçüler</h2>
+            {([['width', 'En (cm)'], ['length', 'Boy (cm)'], ['height', 'Yükseklik (cm)'], ['weight', 'Ağırlık (kg)']] as const).map(([field, label]) => <div key={field}>
+                <label htmlFor={field}>{label}</label><input id={field} type="number" required min="0.01" step="0.01" value={shipment[field]}
+                    onChange={e => setShipment({ ...shipment, [field]: e.target.value })} />
+            </div>)}
+            {error && <p role="alert" className="deleteError">{error}</p>}
+            <button type="submit">{saving ? "Kaydediliyor..." : "Gönderi oluştur"}</button>
+        </fieldset></form></main>;
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import Link from "next/link";
 
 interface CurrentUser {
     id: number; name: string; surname: string; email: string;
@@ -51,6 +52,7 @@ export default function ProfilePage() {
             <dt>Yaş</dt><dd>{user.age}</dd>
             <dt>TC kimlik numarası</dt><dd>{user.tc}</dd>
         </dl>}
+        {user && <p><Link href={`/users/${user.id}`}>Gönderilerim ve adreslerim</Link></p>}
         <button onClick={handleLogout}>Çıkış yap</button>
     </main>;
 }
