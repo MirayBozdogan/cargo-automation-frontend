@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AuthProvider } from "./components/AuthProvider";
+import Navigation from "./components/Navigation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,14 +16,10 @@ export default function RootLayout({
   return (
       <html lang="tr">
       <body>
-      <nav>
-        <Link href="/">Giriş Yap</Link>
-        <Link href="/register">Kayıt Ol</Link>
-        <Link href="/profile">Profilim</Link>
-        <Link href="/addresses">Adreslerim</Link>
-      </nav>
-
-      {children}
+      <AuthProvider>
+        <Navigation />
+        {children}
+      </AuthProvider>
       </body>
       </html>
   );

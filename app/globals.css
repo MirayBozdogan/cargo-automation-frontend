@@ -197,3 +197,15 @@ main {
   background-color: #1d4ed8;
   border-color: #1d4ed8;
 }
+
+/* Personel yönetimi */
+.staff-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.staff-form-panel { border: 1px solid #9ca3af; border-radius: 6px; padding: 20px; margin: 20px 0; }
+.staff-form-panel h2 { font-size: 20px; margin-bottom: 10px; }
+.staff-form-panel > p { margin-bottom: 15px; }
+.staff-table-container { overflow-x: auto; }
+.staff-table-container table { min-width: 700px; }
+.staff-table-container caption { text-align: left; padding: 10px 0; }
+nav { flex-wrap: wrap; }
+nav p { color: white; }
+nav button { color: #171717; }
