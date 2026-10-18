@@ -12,6 +12,7 @@ export default function Navigation() {
             <Link href="/addresses">Adreslerim</Link>
             <Link href={`/users/${user.id}`}>Gönderilerim</Link>
             <Link href="/shipments">Gönderi Oluştur</Link>
+            {(user.role === "STAFF" || user.role === "ADMIN") && <Link href="/users">Müşteriler</Link>}
             {user.role === "ADMIN" && <Link href="/staff">Personel Yönetimi</Link>}
             <button onClick={logout}>Çıkış yap</button>
         </>}
