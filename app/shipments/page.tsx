@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
 
-interface User { id: number; name: string; surname: string }
+interface Sender { id: number; name: string; surname: string; active: boolean }
+interface User extends Sender { role: "USER" | "STAFF" | "ADMIN" }
 interface City { id: number; name: string }
 interface District { id: number; name: string; city: City }
 interface Address { id: number; neighborhood: string; city: City; district: District }
@@ -32,8 +33,21 @@ function AddressFields({ prefix, value, onChange, cities, districts }: {
     </>;
 }
 export default function ShipmentPage() {
+    return <Suspense fallback={<main><p role="status">Gönderi formu yükleniyor...</p></main>}><ShipmentRoute /></Suspense>;
+}
+function ShipmentRoute() {
+    const parameters = useSearchParams();
+    const senderId = parameters.get("senderId");
+    if (senderId !== null && (!/^[1-9][0-9]*$/.test(senderId) || Number(senderId) > 2147483647)) {
+        return <main><p role="alert">Geçersiz müşteri seçimi.</p><Link href="/users">Müşterilere dön</Link></main>;
+    }
+    return <ShipmentForm key={senderId ?? "self"} requestedSenderId={senderId === null ? null : Number(senderId)} />;
+}
+function ShipmentForm({ requestedSenderId }: { requestedSenderId: number | null }) {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
+    const [selectedSender, setSelectedSender] = useState<Sender | null>(null);
+    const onBehalf = Boolean(user && selectedSender && user.id !== selectedSender.id);
     const [cities, setCities] = useState<City[]>([]);
     const [districts, setDistricts] = useState<District[]>([]);
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -61,13 +75,24 @@ export default function ShipmentPage() {
                 const [me, cityResponse, districtResponse] = await Promise.all([
                     api.get<User>("/users/me"), api.get<City[]>("/city"), api.get<District[]>("/district"),
                 ]);
-                const addressResponse = await api.get<Address[]>(`/users/${me.data.id}/address`);
-                if (active) { setUser(me.data); setCities(cityResponse.data); setDistricts(districtResponse.data); setAddresses(addressResponse.data); }
-            } catch { if (active) setError("Form bilgileri yüklenemedi. Sayfayı yenileyerek tekrar deneyebilirsin."); }
+                let sendingUser: Sender = me.data;
+                if (requestedSenderId !== null && requestedSenderId !== me.data.id) {
+                    if (me.data.role !== "STAFF" && me.data.role !== "ADMIN") {
+                        throw new Error("Başka bir müşteri adına gönderi oluşturma yetkiniz yok.");
+                    }
+                    const customerResponse = await api.get<Sender>(`/users/customers/${requestedSenderId}`);
+                    sendingUser = customerResponse.data;
+                    if (!sendingUser.active) throw new Error("Pasif müşteri adına gönderi oluşturulamaz.");
+                }
+                const addressResponse = await api.get<Address[]>(`/users/${sendingUser.id}/address`);
+                if (active) { setUser(me.data); setSelectedSender(sendingUser); setCities(cityResponse.data); setDistricts(districtResponse.data); setAddresses(addressResponse.data); }
+            } catch (error) { if (active) setError(axios.isAxiosError<{ message: string }>(error)
+                ? error.response?.data?.message || "Form bilgileri yüklenemedi."
+                : error instanceof Error ? error.message : "Form bilgileri yüklenemedi."); }
             finally { if (active) setLoading(false); }
         }
         void load(); return () => { active = false; };
-    }, [router]);
+    }, [router, requestedSenderId]);
     async function calculatePrice() {
         if (calculating || saving) return;
         setPriceError(""); setPreview(null);
@@ -90,7 +115,7 @@ export default function ShipmentPage() {
     }
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (saving || calculating || !user || created) return;
+        if (saving || calculating || !user || !selectedSender || created) return;
         setError("");
         if (!receiverName.trim() || !receiverSurname.trim() || !receiver.address.trim() || (!senderAddressId && !sender.address.trim())) {
             setError("Ad, soyad ve adres alanları boş olamaz."); return;
@@ -106,6 +131,7 @@ export default function ShipmentPage() {
             const receiverAddress = manualAddress(receiver);
             const senderAddress = senderAddressId ? null : manualAddress(sender);
             const response = await api.post<ShipmentResponse>("/shipment", {
+                ...(onBehalf && selectedSender ? { senderId: selectedSender.id } : {}),
                 width: Number(shipment.width), length: Number(shipment.length), height: Number(shipment.height), weight: Number(shipment.weight),
                 ...(senderAddressId ? { senderAddressId: Number(senderAddressId) } : {
                     senderCity: senderAddress?.city, senderDistrict: senderAddress?.district, senderAddressText: senderAddress?.address,
@@ -119,20 +145,23 @@ export default function ShipmentPage() {
         finally { setSaving(false); }
     }
     if (loading) return <main><p role="status">Gönderi formu yükleniyor...</p></main>;
-    if (!user) return <main><p role="alert">{error}</p></main>;
+    if (!user || !selectedSender) return <main><p role="alert">{error}</p><Link href="/profile">Profilime dön</Link></main>;
     if (created) return <main><h1>Gönderi oluşturuldu</h1><p role="status">Gönderin kaydedildi.</p>
         <p>Takip numarası (barkod): <strong>{created.barcode}</strong></p>
         <p>Kargo ücreti: {formatPrice(created.price)}</p>
-        <Link href={`/users/${user.id}`}>Gönderilerimi görüntüle</Link></main>;
-    return <main><h1>Gönderi Oluştur</h1><form onSubmit={handleSubmit}>
+        {onBehalf ? <><p>Gönderici: {selectedSender.name} {selectedSender.surname}. Gönderi müşterinin kendi listesinde görünecek.</p><Link href="/users">Müşterilere dön</Link></>
+            : <Link href={`/users/${user.id}`}>Gönderilerimi görüntüle</Link>}</main>;
+    return <main><h1>{onBehalf ? "Müşteri Adına Gönderi Oluştur" : "Gönderi Oluştur"}</h1><form onSubmit={handleSubmit}>
         <fieldset disabled={saving || calculating} className="registration-fields">
-            <h2>Gönderici</h2><p>{user.name} {user.surname}</p>
+            <h2>Gönderici</h2><p>{selectedSender.name} {selectedSender.surname}</p>
+            {onBehalf && <p>Seçilen müşteri ID: {selectedSender.id}. <Link href="/users">Başka müşteri seç</Link></p>}
             <label htmlFor="senderAddressId">Gönderici adresi</label>
             <select id="senderAddressId" value={senderAddressId} onChange={e => setSenderAddressId(e.target.value)}>
                 <option value="">Adresi elle gir</option>{addresses.map(address => <option key={address.id} value={address.id}>
                     {address.city.name} / {address.district.name} — {address.neighborhood}</option>)}
             </select>
-            {!addresses.length && <p>Kayıtlı adresin yok. Adresi elle girebilir veya <Link href="/addresses">adres ekleyebilirsin</Link>.</p>}
+            {!addresses.length && (onBehalf ? <p>Müşterinin kayıtlı adresi yok. Gönderici adresini elle girebilirsin.</p>
+                : <p>Kayıtlı adresin yok. Adresi elle girebilir veya <Link href="/addresses">adres ekleyebilirsin</Link>.</p>)}
             {!senderAddressId && <AddressFields prefix="sender" value={sender} onChange={setSender} cities={cities} districts={districts} />}
             <h2>Alıcı</h2><label htmlFor="receiverName">Ad</label>
             <input id="receiverName" required value={receiverName} onChange={e => setReceiverName(e.target.value)} />

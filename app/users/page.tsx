@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuth } from "../components/AuthProvider";
 
@@ -92,9 +93,10 @@ function CustomerList() {
                     <p role="status">Toplam {result.totalElements} müşteri</p>
                     <div className="staff-table-container"><table>
                         <caption>Müşteri listesi</caption>
-                        <thead><tr><th>ID</th><th>Ad</th><th>Soyad</th><th>E-posta</th><th>Telefon</th><th>Yaş</th><th>Durum</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Ad</th><th>Soyad</th><th>E-posta</th><th>Telefon</th><th>Yaş</th><th>Durum</th><th>İşlem</th></tr></thead>
                         <tbody>{result.content.map(user => <tr key={user.id}>
                             <td>{user.id}</td><td>{user.name}</td><td>{user.surname}</td><td>{user.email}</td><td>{user.telNo}</td><td>{user.age}</td><td>{user.active ? "Aktif" : "Pasif"}</td>
+                            <td>{user.active ? <Link href={`/shipments?senderId=${user.id}`}>Adına gönderi oluştur</Link> : "Pasif hesap"}</td>
                         </tr>)}</tbody>
                     </table></div>
                     <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
