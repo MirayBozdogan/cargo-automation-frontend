@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
+import AuthShell from "../components/AuthShell";
 
 export default function RegisterPage() {
     const [form, setForm] = useState({
@@ -43,15 +44,17 @@ export default function RegisterPage() {
     };
 
     if (registered) {
-        return <main>
+        return <AuthShell>
             <h1>Kayıt tamamlandı</h1>
             <p role="status">Hesabın oluşturuldu. E-posta adresin ve şifrenle giriş yapabilirsin.</p>
             <Link href="/">Giriş yap</Link>
-        </main>;
+        </AuthShell>;
     }
 
-    return <main>
-        <h1>Müşteri Kaydı</h1>
+    return <AuthShell>
+        <p className="eyebrow">ARAMIZA KATIL</p>
+        <h1>Müşteri kaydı</h1>
+        <p className="auth-description">Gönderilerini yönetmek için hesabını oluştur.</p>
         <form onSubmit={handleSubmit}>
             <fieldset disabled={isSubmitting} className="registration-fields">
                 <label htmlFor="name">Ad</label>
@@ -80,9 +83,9 @@ export default function RegisterPage() {
                 <input id="passwordConfirmation" type="password" autoComplete="new-password" minLength={6} required
                     value={passwordConfirmation} onChange={e => setPasswordConfirmation(e.target.value)} />
                 {error && <p role="alert" className="deleteError">{error}</p>}
-                <button type="submit">{isSubmitting ? "Kaydediliyor..." : "Kayıt ol"}</button>
+                <button className="button-primary" type="submit">{isSubmitting ? "Kaydediliyor..." : "Kayıt ol"}</button>
             </fieldset>
         </form>
-        <p>Zaten hesabın var mı? <Link href="/">Giriş yap</Link></p>
-    </main>;
+        <p className="auth-footer">Zaten hesabın var mı? <Link href="/">Giriş yap</Link></p>
+    </AuthShell>;
 }
