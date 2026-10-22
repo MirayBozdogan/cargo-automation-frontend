@@ -12,6 +12,7 @@ export default function Navigation() {
         { href: `/users/${user.id}`, label: "Gönderilerim" },
         { href: "/shipments", label: "Gönderi Oluştur" },
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/users", label: "Müşteriler" }] : []),
+        ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/operations", label: "Gönderi Operasyonları" }] : []),
         ...(user.role === "ADMIN" ? [{ href: "/staff", label: "Personel Yönetimi" }] : []),
     ] : [{ href: "/", label: "Giriş Yap" }, { href: "/register", label: "Kayıt Ol" }];
 
