@@ -4,15 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import Link from "next/link";
+import { statusLabels, currency, dateFormat, fullName } from "@/lib/shipment-display";
 import { useAuth } from "../components/AuthProvider";
 
-const statusLabels = {
-    CREATED: "Oluşturuldu",
-    ACCEPTED: "Kabul edildi",
-    READY_FOR_DISTRIBUTION: "Dağıtıma hazır",
-    OUT_FOR_DELIVERY: "Dağıtımda",
-    DELIVERED: "Teslim edildi",
-} as const;
 interface ShipmentSummary {
     id: number; barcode: string; status: keyof typeof statusLabels;
     senderName: string | null; senderSurname: string | null;
@@ -21,12 +16,6 @@ interface ShipmentSummary {
 }
 interface ShipmentPage { content: ShipmentSummary[]; totalPages: number; totalElements: number; number: number }
 interface ListRequest { status: string; page: number; revision: number }
-const currency = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
-const dateFormat = new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Istanbul" });
-function fullName(name: string | null, surname: string | null) {
-    return [name, surname].filter(Boolean).join(" ") || "—";
-}
-
 export default function OperationsPage() {
     const { user, loading, error, reload } = useAuth();
     const router = useRouter();
@@ -95,7 +84,7 @@ function ShipmentList() {
                     {result.totalElements === 0 ? <p>{request.status ? "Bu durumda gönderi bulunamadı." : "Henüz gönderi kaydı yok."}</p> : <>
                         <div className="staff-table-container"><table>
                             <caption>{request.status ? statusLabels[request.status as keyof typeof statusLabels] : "Tüm durumlar"} — gönderi listesi</caption>
-                            <thead><tr><th scope="col">Barkod</th><th scope="col">Gönderici</th><th scope="col">Alıcı</th><th scope="col">Durum</th><th scope="col">Ücret</th><th scope="col">Oluşturulma</th></tr></thead>
+                            <thead><tr><th scope="col">Barkod</th><th scope="col">Gönderici</th><th scope="col">Alıcı</th><th scope="col">Durum</th><th scope="col">Ücret</th><th scope="col">Oluşturulma</th><th scope="col">İşlem</th></tr></thead>
                             <tbody>{result.content.map(shipment => <tr key={shipment.id}>
                                 <td>{shipment.barcode}</td>
                                 <td>{fullName(shipment.senderName, shipment.senderSurname)}</td>
@@ -103,6 +92,7 @@ function ShipmentList() {
                                 <td>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</td>
                                 <td>{shipment.price === null ? "—" : currency.format(shipment.price)}</td>
                                 <td>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
+                                <td><Link href={`/operations/${shipment.id}`} aria-label={`${shipment.barcode} gönderisinin detayını görüntüle`}>Detayı görüntüle</Link></td>
                             </tr>)}</tbody>
                         </table></div>
                         <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
