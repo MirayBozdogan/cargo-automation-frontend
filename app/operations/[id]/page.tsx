@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
@@ -43,11 +43,21 @@ function ShipmentDetailView({ id }: { id: string }) {
     const [error, setError] = useState("");
     const [retryable, setRetryable] = useState(false);
     const [revision, setRevision] = useState(0);
+    const [actionBusy, setActionBusy] = useState(false);
+    const [actionError, setActionError] = useState("");
+    const [actionSuccess, setActionSuccess] = useState("");
+    const [actionBlocked, setActionBlocked] = useState(false);
+    const inFlight = useRef(false);
+    const mounted = useRef(false);
+    useEffect(() => {
+        mounted.current = true;
+        return () => { mounted.current = false; };
+    }, []);
     useEffect(() => {
         let active = true;
         api.get<ShipmentDetail>(`/shipment/operations/${id}`).then(response => {
             if (!active) return;
-            setShipment(response.data); setError(""); setLoading(false);
+            setShipment(response.data); setError(""); setActionBlocked(false); setLoading(false);
         }).catch(error => {
             if (!active) return;
             const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -60,6 +70,36 @@ function ShipmentDetailView({ id }: { id: string }) {
     }, [id, revision]);
     function retry() {
         setLoading(true); setError(""); setRevision(current => current + 1);
+    }
+    async function performAction(action: "accept" | "prepare") {
+        if (inFlight.current || !shipment || actionBlocked) return;
+        inFlight.current = true;
+        setActionBusy(true); setActionError(""); setActionSuccess("");
+        try {
+            const response = await api.patch<{ status: ShipmentDetail["status"] }>(`/shipment/${id}/${action}`);
+            if (!mounted.current) return;
+            setShipment(current => current ? { ...current, status: response.data.status } : current);
+            setActionSuccess(action === "accept" ? "Gönderi kabul edildi." : "Gönderi dağıtıma hazırlandı.");
+        } catch (error) {
+            if (!mounted.current) return;
+            const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+            setActionError(status === 409 ? "Gönderinin durumu değişmiş olabilir. Güncel bilgiler yeniden yüklendi."
+                : status === 403 ? "Bu işlemi yapma yetkin yok."
+                    : "İşlem sonucu doğrulanamadı. Güncel gönderi durumu yeniden kontrol edildi.");
+            if (status === 403) setActionBlocked(true);
+            try {
+                const latest = await api.get<ShipmentDetail>(`/shipment/operations/${id}`);
+                if (mounted.current) setShipment(latest.data);
+            } catch {
+                if (mounted.current) {
+                    setShipment(null); setError("Güncel gönderi bilgileri alınamadı. Tekrar yükleyerek kontrol et.");
+                    setRetryable(true);
+                }
+            }
+        } finally {
+            inFlight.current = false;
+            if (mounted.current) setActionBusy(false);
+        }
     }
     return <main>
         <p><Link href="/operations">← Gönderi listesine dön</Link></p>
@@ -76,6 +116,16 @@ function ShipmentDetailView({ id }: { id: string }) {
                             <dt>Oluşturulma</dt><dd>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</dd>
                             <dt>Teslim zamanı</dt><dd>{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</dd>
                         </dl>
+                    </section>
+                    <section aria-labelledby="shipment-actions">
+                        <h2 id="shipment-actions">Gönderi işlemleri</h2>
+                        {actionSuccess && <p role="status">{actionSuccess}</p>}
+                        {actionError && <p role="alert" className="error-box error-400">{actionError}</p>}
+                        {!actionBlocked && shipment.status === "CREATED" && <button className="button-primary" disabled={actionBusy}
+                            onClick={() => performAction("accept")}>{actionBusy ? "İşleniyor..." : "Kabul et"}</button>}
+                        {!actionBlocked && shipment.status === "ACCEPTED" && <button className="button-primary" disabled={actionBusy}
+                            onClick={() => performAction("prepare")}>{actionBusy ? "İşleniyor..." : "Dağıtıma hazırla"}</button>}
+                        {shipment.status !== "CREATED" && shipment.status !== "ACCEPTED" && <p>Bu durum için kabul veya hazırlama işlemi bulunmuyor.</p>}
                     </section>
                     <section aria-labelledby="sender-details">
                         <h2 id="sender-details">Gönderici ve çıkış adresi</h2>

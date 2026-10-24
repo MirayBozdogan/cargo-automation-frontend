@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import { statusLabels, dateFormat, currency } from "@/lib/shipment-display";
 
 interface User { id: number; name: string; surname: string; email: string; age: number; tc: string; telNo: string }
 interface Address { id: number; neighborhood: string; buildingNo: number | null; apartmentNo: number | null; city: { name: string }; district: { name: string } }
 interface Shipment {
+    status: keyof typeof statusLabels; createdAt: string | null; deliveredAt: string | null;
     id: number; barcode: string; senderName: string; senderSurname: string;
     receiverName: string; receiverSurname: string; receiverCity: string; receiverDistrict: string;
     receiverAddressText: string; weight: number; price: number; sender: { id: number } | null;
@@ -31,6 +33,7 @@ function UserDetailContent({ id }: { id: string }) {
     const [shipmentPage, setShipmentPage] = useState(0);
     const [shipmentError, setShipmentError] = useState("");
     const [shipmentsLoading, setShipmentsLoading] = useState(true);
+    const [deleteError, setDeleteError] = useState("");
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [revision, setRevision] = useState(0);
 
@@ -77,11 +80,18 @@ function UserDetailContent({ id }: { id: string }) {
     }
     async function handleDeleteShipment(shipmentId: number) {
         if (deletingId !== null || !confirm("Bu gönderiyi silmek istediğinize emin misiniz?")) return;
-        setDeletingId(shipmentId); setShipmentError("");
+        setDeletingId(shipmentId); setShipmentError(""); setDeleteError("");
         try {
             await api.delete(`/shipment/${shipmentId}`);
             setShipmentsLoading(true); setRevision(current => current + 1);
-        } catch (error) { setShipmentError(message(error, "Gönderi silinemedi.")); }
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 409) {
+                setDeleteError(message(error, "Gönderinin durumu değişti; artık silinemiyor."));
+                setShipmentsLoading(true); setRevision(current => current + 1);
+            } else {
+                setShipmentError(message(error, "Gönderi silinemedi."));
+            }
+        }
         finally { setDeletingId(null); }
     }
     if (profileLoading) return <main><p role="status">Kullanıcı bilgileri yükleniyor...</p></main>;
@@ -100,22 +110,29 @@ function UserDetailContent({ id }: { id: string }) {
             </tr>)}</tbody>
         </table>}
         <h2>Gönderilerim</h2><p>Gönderici veya alıcı olduğun gönderiler burada listelenir.</p>
+        <button disabled={shipmentsLoading || deletingId !== null} onClick={() => {
+            setShipmentsLoading(true); setShipmentError(""); setRevision(current => current + 1);
+        }}>Gönderileri yenile</button>
+        {deleteError && <p role="alert" className="error-box error-400">{deleteError}</p>}
         {shipmentError && <div role="alert"><p>{shipmentError}</p><button disabled={shipmentsLoading} onClick={() => {
             setShipmentError(""); setShipmentsLoading(true); setRevision(current => current + 1);
         }}>Tekrar dene</button></div>}
         {shipmentsLoading ? <p role="status">Gönderiler yükleniyor...</p> : !shipmentError && result && <>
             {result.totalElements === 0 ? <p>Henüz gönderin yok.</p> : <>
                 <p>Toplam {result.totalElements} gönderi</p>
-                <table><thead><tr><th>ID</th><th>Barkod</th><th>Gönderici</th><th>Alıcı</th><th>Alıcı Adresi</th><th>Ağırlık</th><th>Fiyat</th><th>İşlem</th></tr></thead>
+                <div className="staff-table-container"><table className="customer-shipments-table"><thead><tr><th>ID</th><th>Barkod</th><th>Gönderici</th><th>Alıcı</th><th>Alıcı Adresi</th><th>Ağırlık</th><th>Fiyat</th><th>Durum</th><th>Oluşturulma</th><th>Teslim zamanı</th><th>İşlem</th></tr></thead>
                     <tbody>{result.content.map(shipment => <tr key={shipment.id}>
                         <td>{shipment.id}</td><td>{shipment.barcode}</td>
                         <td>{shipment.senderName} {shipment.senderSurname}</td><td>{shipment.receiverName} {shipment.receiverSurname}</td>
                         <td>{shipment.receiverCity} / {shipment.receiverDistrict}<br />{shipment.receiverAddressText}</td>
-                        <td>{shipment.weight}</td><td>{shipment.price}</td>
-                        <td>{shipment.sender?.id === user.id && <button className="delete-shipment-button" disabled={deletingId !== null}
-                            onClick={() => handleDeleteShipment(shipment.id)}>{deletingId === shipment.id ? "Siliniyor..." : "Sil"}</button>}</td>
+                        <td>{shipment.weight}</td><td>{currency.format(shipment.price)}</td>
+                        <td>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</td>
+                        <td>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
+                        <td>{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</td>
+                        <td>{shipment.sender?.id === user.id && (shipment.status === "CREATED" ? <button className="delete-shipment-button" disabled={deletingId !== null}
+                            onClick={() => handleDeleteShipment(shipment.id)}>{deletingId === shipment.id ? "Siliniyor..." : "Sil"}</button> : "Kabul sonrası silinemez")}</td>
                     </tr>)}</tbody>
-                </table>
+                </table></div>
                 <button disabled={shipmentPage === 0 || deletingId !== null} onClick={() => changePage(shipmentPage - 1)}>Önceki</button>
                 <span style={{ margin: "0 15px" }}>Sayfa {result.number + 1} / {result.totalPages}</span>
                 <button disabled={shipmentPage + 1 >= result.totalPages || deletingId !== null} onClick={() => changePage(shipmentPage + 1)}>Sonraki</button>

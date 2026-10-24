@@ -137,3 +137,11 @@ dd { font-weight: 600; }
   dt, dd { padding: 10px 6px; }
 }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+
+/* Status and date columns stay readable while the customer list scrolls horizontally. */
+table.customer-shipments-table { min-width: 1150px; }
+.customer-shipments-table th { white-space: nowrap; }
+.customer-shipments-table td:nth-child(2),
+.customer-shipments-table td:nth-child(8),
+.customer-shipments-table td:nth-child(9),
+.customer-shipments-table td:nth-child(10) { white-space: nowrap; }
