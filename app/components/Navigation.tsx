@@ -11,8 +11,10 @@ export default function Navigation() {
         { href: "/addresses", label: "Adreslerim" },
         { href: `/users/${user.id}`, label: "Gönderilerim" },
         { href: "/shipments", label: "Gönderi Oluştur" },
+        { href: "/tracking", label: "Kargo Takibi" },
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/users", label: "Müşteriler" }] : []),
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/operations", label: "Gönderi Operasyonları" }] : []),
+        ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/deliveries", label: "Dağıtımdakiler" }] : []),
         ...(user.role === "ADMIN" ? [{ href: "/staff", label: "Personel Yönetimi" }] : []),
     ] : [{ href: "/", label: "Giriş Yap" }, { href: "/register", label: "Kayıt Ol" }];
 

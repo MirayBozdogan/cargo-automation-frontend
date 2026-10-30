@@ -6,6 +6,7 @@ import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
 import { currency, dateFormat, fullName, statusLabels } from "@/lib/shipment-display";
+import CourierAssignment from "../../components/CourierAssignment";
 import { useAuth } from "../../components/AuthProvider";
 
 interface ShipmentDetail {
@@ -16,6 +17,7 @@ interface ShipmentDetail {
     receiverName: string | null; receiverSurname: string | null; receiverCity: string | null;
     receiverDistrict: string | null; receiverAddressText: string | null;
     createdAt: string | null; deliveredAt: string | null;
+    courier: { id: number; name: string | null; surname: string | null } | null;
 }
 function location(city: string | null, district: string | null) {
     return [city, district].filter(Boolean).join(" / ") || "—";
@@ -35,9 +37,9 @@ export default function OperationDetailPage() {
     if (!user) return <main><p role="status">Giriş ekranına yönlendiriliyor...</p></main>;
     if (user.role !== "STAFF" && user.role !== "ADMIN") return <main><h1>Gönderi Detayı</h1><p role="alert">Bu sayfayı yalnız personel ve yöneticiler görebilir.</p></main>;
     if (!/^[1-9]\d*$/.test(id) || Number(id) > 2147483647) return <main><h1>Gönderi Detayı</h1><p role="alert">Geçersiz gönderi numarası.</p><Link href="/operations">Gönderi listesine dön</Link></main>;
-    return <ShipmentDetailView key={`${user.id}:${id}`} id={id} />;
+    return <ShipmentDetailView key={`${user.id}:${id}`} id={id} userId={user.id} role={user.role} />;
 }
-function ShipmentDetailView({ id }: { id: string }) {
+function ShipmentDetailView({ id, userId, role }: { id: string; userId: number; role: "STAFF" | "ADMIN" }) {
     const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -47,6 +49,7 @@ function ShipmentDetailView({ id }: { id: string }) {
     const [actionError, setActionError] = useState("");
     const [actionSuccess, setActionSuccess] = useState("");
     const [actionBlocked, setActionBlocked] = useState(false);
+    const [courierRevision, setCourierRevision] = useState(0);
     const inFlight = useRef(false);
     const mounted = useRef(false);
     useEffect(() => {
@@ -71,19 +74,25 @@ function ShipmentDetailView({ id }: { id: string }) {
     function retry() {
         setLoading(true); setError(""); setRevision(current => current + 1);
     }
-    async function performAction(action: "accept" | "prepare") {
+    async function performAction(action: "accept" | "prepare" | "assign-courier" | "deliver", courierId?: number) {
         if (inFlight.current || !shipment || actionBlocked) return;
         inFlight.current = true;
         setActionBusy(true); setActionError(""); setActionSuccess("");
         try {
-            const response = await api.patch<{ status: ShipmentDetail["status"] }>(`/shipment/${id}/${action}`);
+            const response = await api.patch<ShipmentDetail>(`/shipment/${id}/${action}`,
+                action === "assign-courier" ? { courierId } : undefined);
             if (!mounted.current) return;
-            setShipment(current => current ? { ...current, status: response.data.status } : current);
-            setActionSuccess(action === "accept" ? "Gönderi kabul edildi." : "Gönderi dağıtıma hazırlandı.");
+            setShipment(response.data);
+            const messages = { accept: "Gönderi kabul edildi.", prepare: "Gönderi dağıtıma hazırlandı.",
+                "assign-courier": "Kurye atandı; gönderi dağıtıma çıktı.", deliver: "Gönderi teslim edildi." };
+            setActionSuccess(messages[action]);
         } catch (error) {
             if (!mounted.current) return;
             const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-            setActionError(status === 409 ? "Gönderinin durumu değişmiş olabilir. Güncel bilgiler yeniden yüklendi."
+            const serverMessage = axios.isAxiosError<{ message: string }>(error) ? error.response?.data?.message : undefined;
+            if (action === "assign-courier") setCourierRevision(current => current + 1);
+            setActionError(status === 400 ? serverMessage || "Seçilen kurye uygun değil. Listeyi yeniden kontrol et."
+                : status === 409 ? serverMessage || "Gönderinin durumu değişmiş olabilir. Güncel bilgiler yeniden kontrol ediliyor."
                 : status === 403 ? "Bu işlemi yapma yetkin yok."
                     : "İşlem sonucu doğrulanamadı. Güncel gönderi durumu yeniden kontrol edildi.");
             if (status === 403) setActionBlocked(true);
@@ -114,6 +123,7 @@ function ShipmentDetailView({ id }: { id: string }) {
                             <dt>Durum</dt><dd>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</dd>
                             <dt>Ücret</dt><dd>{shipment.price === null ? "—" : currency.format(shipment.price)}</dd>
                             <dt>Oluşturulma</dt><dd>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</dd>
+                            <dt>Kurye</dt><dd>{shipment.courier ? fullName(shipment.courier.name, shipment.courier.surname) : "Henüz atanmadı"}</dd>
                             <dt>Teslim zamanı</dt><dd>{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</dd>
                         </dl>
                     </section>
@@ -125,7 +135,15 @@ function ShipmentDetailView({ id }: { id: string }) {
                             onClick={() => performAction("accept")}>{actionBusy ? "İşleniyor..." : "Kabul et"}</button>}
                         {!actionBlocked && shipment.status === "ACCEPTED" && <button className="button-primary" disabled={actionBusy}
                             onClick={() => performAction("prepare")}>{actionBusy ? "İşleniyor..." : "Dağıtıma hazırla"}</button>}
-                        {shipment.status !== "CREATED" && shipment.status !== "ACCEPTED" && <p>Bu durum için kabul veya hazırlama işlemi bulunmuyor.</p>}
+                        {!actionBlocked && shipment.status === "READY_FOR_DISTRIBUTION" && <CourierAssignment
+                            key={courierRevision} busy={actionBusy} onAssign={courierId => performAction("assign-courier", courierId)} />}
+                        {!actionBlocked && shipment.status === "OUT_FOR_DELIVERY" && (role === "ADMIN" || shipment.courier?.id === userId) &&
+                            <button className="button-primary" disabled={actionBusy} onClick={() => performAction("deliver")}>
+                                {actionBusy ? "İşleniyor..." : "Teslim edildi olarak kaydet"}</button>}
+                        {shipment.status === "OUT_FOR_DELIVERY" && role !== "ADMIN" && shipment.courier?.id !== userId &&
+                            <p>Teslim kaydını yalnız atanan personel veya yönetici yapabilir.</p>}
+                        {shipment.status === "DELIVERED" && <p>Gönderi teslim edildi. İşlem tamamlandı.</p>}
+                        <p><Link href="/deliveries">Dağıtımdaki gönderileri görüntüle</Link></p>
                     </section>
                     <section aria-labelledby="sender-details">
                         <h2 id="sender-details">Gönderici ve çıkış adresi</h2>
