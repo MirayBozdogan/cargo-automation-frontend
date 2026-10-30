@@ -8,7 +8,6 @@ export default function Navigation() {
     const pathname = usePathname();
     const links = user ? [
         { href: "/profile", label: "Profilim" },
-        { href: "/addresses", label: "Adreslerim" },
         { href: `/users/${user.id}`, label: "Gönderilerim" },
         { href: "/shipments", label: "Gönderi Oluştur" },
         { href: "/tracking", label: "Kargo Takibi" },

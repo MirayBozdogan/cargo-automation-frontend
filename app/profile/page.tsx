@@ -22,7 +22,8 @@ export default function ProfilePage() {
                 <dt>Yaş</dt><dd>{user.age}</dd><dt>TC kimlik numarası</dt><dd>{user.tc ?? "—"}</dd>
                 <dt>Rol</dt><dd>{user.role === "ADMIN" ? "Yönetici" : user.role === "STAFF" ? "Personel" : "Müşteri"}</dd>
             </dl>
-            <p><Link href={`/users/${user.id}`}>Gönderilerim ve adreslerim</Link></p>
+            <p><Link href={`/users/${user.id}`}>Gönderilerim</Link></p>
+            <p><Link href="/addresses">Adreslerim</Link></p>
             {user.role === "ADMIN" && <p><Link href="/staff">Personel Yönetimi</Link></p>}
             <button onClick={logout}>Çıkış yap</button>
         </>}
