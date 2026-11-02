@@ -79,6 +79,8 @@ function ShipmentList({ fixedStatus, title }: { fixedStatus?: keyof typeof statu
                 {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
         </div>}
+        {!fixedStatus && <button disabled={loading || request.status === "DELIVERED"}
+            onClick={() => changeStatus("DELIVERED")}>Teslim edilenleri göster</button>}
         <button disabled={loading} onClick={retry}>Listeyi yenile</button>
         {loading ? <p role="status">Gönderiler yükleniyor...</p>
             : error ? <div role="alert" className="error-box error-500"><p>{error}</p><button onClick={retry}>Tekrar dene</button></div>
