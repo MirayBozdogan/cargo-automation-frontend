@@ -14,7 +14,7 @@ export default function Navigation() {
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/users", label: "Müşteriler" }] : []),
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/operations", label: "Gönderi Operasyonları" }] : []),
         ...((user.role === "STAFF" || user.role === "ADMIN") ? [{ href: "/deliveries", label: "Dağıtımdakiler" }] : []),
-        ...(user.role === "ADMIN" ? [{ href: "/staff", label: "Personel Yönetimi" }] : []),
+        ...(user.role === "ADMIN" ? [{ href: "/staff", label: "Personel Yönetimi" }, { href: "/reports", label: "Raporlar" }] : []),
     ] : [{ href: "/", label: "Giriş Yap" }, { href: "/register", label: "Kayıt Ol" }];
 
     return <nav className="site-nav" aria-label="Ana menü">
