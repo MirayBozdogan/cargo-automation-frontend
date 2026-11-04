@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import { useAuth, type CurrentUser } from "../../components/AuthProvider";
 import { statusLabels, dateFormat, currency } from "@/lib/shipment-display";
 
-interface User { id: number; name: string; surname: string; email: string; age: number; tc: string; telNo: string }
 interface Address { id: number; neighborhood: string; buildingNo: number | null; apartmentNo: number | null; city: { name: string }; district: { name: string } }
 interface Shipment {
     status: keyof typeof statusLabels; createdAt: string | null; deliveredAt: string | null;
@@ -20,15 +20,25 @@ function message(error: unknown, fallback: string) {
 }
 export default function UserDetailPage() {
     const { id } = useParams<{ id: string }>();
-    return <UserDetailContent key={id} id={id} />;
+    const { user, loading, error, reload } = useAuth();
+    const router = useRouter();
+    useEffect(() => {
+        if (!loading && !error && !user) router.replace("/");
+    }, [loading, error, user, router]);
+    if (loading) return <main><p role="status">Kullanıcı bilgileri yükleniyor...</p></main>;
+    if (error) return <main><p role="alert">{error}</p><button onClick={reload}>Tekrar dene</button></main>;
+    if (!user) return <main><p role="status">Giriş ekranına yönlendiriliyor...</p></main>;
+    if (String(user.id) !== id) return <main><p role="alert">Bu kullanıcının bilgilerine erişemezsiniz.</p></main>;
+    return <UserDetailContent key={id} user={user} />;
 }
 
-function UserDetailContent({ id }: { id: string }) {
+function UserDetailContent({ user }: { user: CurrentUser }) {
+    const id = String(user.id);
     const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
-    const [profileError, setProfileError] = useState("");
-    const [profileLoading, setProfileLoading] = useState(true);
+    const [addressesLoading, setAddressesLoading] = useState(true);
+    const [addressError, setAddressError] = useState("");
+    const [addressRevision, setAddressRevision] = useState(0);
     const [result, setResult] = useState<ShipmentPage | null>(null);
     const [shipmentPage, setShipmentPage] = useState(0);
     const [shipmentError, setShipmentError] = useState("");
@@ -38,26 +48,16 @@ function UserDetailContent({ id }: { id: string }) {
     const [revision, setRevision] = useState(0);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) { router.replace("/"); return; }
         let active = true;
-        async function load() {
-            try {
-                const response = await api.get<User>("/users/me");
-                if (String(response.data.id) !== id) {
-                    if (active) setProfileError("Bu kullanıcının bilgilerine erişemezsiniz.");
-                    return;
-                }
-                const addressResponse = await api.get<Address[]>(`/users/${id}/address`);
-                if (active) { setUser(response.data); setAddresses(addressResponse.data); }
-            } catch (error) { if (active) setProfileError(message(error, "Kullanıcı bilgileri yüklenemedi.")); }
-            finally { if (active) setProfileLoading(false); }
-        }
-        void load();
+        api.get<Address[]>(`/users/${id}/address`).then(response => {
+            if (active) { setAddresses(response.data); setAddressError(""); setAddressesLoading(false); }
+        }).catch(error => {
+            if (active) { setAddressError(message(error, "Adresler yüklenemedi.")); setAddressesLoading(false); }
+        });
         return () => { active = false; };
-    }, [id, router]);
+    }, [id, addressRevision]);
 
     useEffect(() => {
-        if (!user || String(user.id) !== id) return;
         let active = true;
         api.get<ShipmentPage>("/shipment", { params: { page: shipmentPage, size: 5, sort: "id,desc" } })
             .then(response => {
@@ -73,7 +73,7 @@ function UserDetailContent({ id }: { id: string }) {
                 if (active) { setShipmentError(message(error, "Gönderiler yüklenemedi.")); setShipmentsLoading(false); }
             });
         return () => { active = false; };
-    }, [id, user, shipmentPage, revision]);
+    }, [id, shipmentPage, revision]);
 
     function changePage(page: number) {
         setShipmentsLoading(true); setShipmentError(""); setShipmentPage(page);
@@ -94,22 +94,25 @@ function UserDetailContent({ id }: { id: string }) {
         }
         finally { setDeletingId(null); }
     }
-    if (profileLoading) return <main><p role="status">Kullanıcı bilgileri yükleniyor...</p></main>;
-    if (profileError || !user || String(user.id) !== id) return <main><p role="alert">{profileError || "Kullanıcı bilgileri gösterilemiyor."}</p></main>;
     return <main>
-        <h1>Kullanıcı Detayı</h1>
+        <h1>Gönderilerim</h1>
         <p>ID: {user.id}</p><p>Ad: {user.name}</p><p>Soyad: {user.surname}</p>
-        <p>Email: {user.email}</p><p>Telefon: {user.telNo}</p><p>Yaş: {user.age}</p><p>TC: {user.tc}</p>
+        <p>E-posta: {user.email}</p><p>Telefon: {user.telNo ?? "—"}</p><p>Yaş: {user.age}</p><p>TC: {user.tc ?? "—"}</p>
         <button onClick={() => router.push("/shipments")}>+ Gönderi Oluştur</button>
         <h2>Adresler</h2>
-        {addresses.length === 0 ? <p>Bu kullanıcının kayıtlı adresi yok.</p> : <table>
+        {addressesLoading ? <p role="status">Adresler yükleniyor...</p>
+            : addressError ? <div role="alert"><p>{addressError}</p><button onClick={() => {
+                setAddressesLoading(true); setAddressError(""); setAddressRevision(current => current + 1);
+            }}>Adresleri tekrar yükle</button></div>
+                : addresses.length === 0 ? <p>Bu kullanıcının kayıtlı adresi yok.</p> : <div className="staff-table-container"><table>
+            <caption>Kayıtlı adreslerin</caption>
             <thead><tr><th>ID</th><th>Şehir</th><th>İlçe</th><th>Mahalle</th><th>Bina No</th><th>Daire No</th></tr></thead>
             <tbody>{addresses.map(address => <tr key={address.id}>
                 <td>{address.id}</td><td>{address.city.name}</td><td>{address.district.name}</td>
                 <td>{address.neighborhood}</td><td>{address.buildingNo ?? "—"}</td><td>{address.apartmentNo ?? "—"}</td>
             </tr>)}</tbody>
-        </table>}
-        <h2>Gönderilerim</h2><p>Gönderici veya alıcı olduğun gönderiler burada listelenir.</p>
+        </table></div>}
+        <h2>Gönderi listesi</h2><p>Gönderici veya alıcı olduğun gönderiler burada listelenir.</p>
         <button disabled={shipmentsLoading || deletingId !== null} onClick={() => {
             setShipmentsLoading(true); setShipmentError(""); setRevision(current => current + 1);
         }}>Gönderileri yenile</button>
