@@ -4,6 +4,33 @@ Next.js frontend for a cargo automation project. The interface supports customer
 
 Backend: [cargo-automation-backend](https://github.com/MirayBozdogan/cargo-automation-backend).
 
+## Preview
+
+<p align="center">
+  <img src="docs/screenshots/gonderi-yasam-dongusu.gif" width="720" alt="An admin moves a shipment from Oluşturuldu to Teslim edildi: accept, prepare, assign a courier and record delivery">
+</p>
+
+<p align="center"><sub>One shipment from creation to delivery: accept, prepare, assign a courier and record delivery. Recorded with fictional demo data.</sub></p>
+
+## Architecture
+
+```mermaid
+flowchart LR
+    user(["Browser"])
+    subgraph FE["This repository · Next.js App Router"]
+        pages["Pages<br/>app/**/page.tsx"]
+        authp["AuthProvider<br/>current user from /users/me"]
+        client["lib/api.ts<br/>Axios, withCredentials"]
+        pages --> authp --> client
+        pages --> client
+    end
+    api["Spring Boot API<br/>cargo-automation-backend"]
+    user --> pages
+    client -- "JSON + HttpOnly session cookie" --> api
+```
+
+Pages are client components that call the backend through one Axios instance. The browser attaches the session cookie; a `401` clears the local session marker and returns to login. Roles only decide which links are shown; the backend makes every authorization decision. The backend architecture and shipment lifecycle diagrams are in its [README](https://github.com/MirayBozdogan/cargo-automation-backend#architecture).
+
 ## Technologies
 
 Next.js 16.4.5, React 19.2.8, TypeScript, Axios and CSS. Tests use Vitest and React Testing Library. Dependency versions are recorded in `package-lock.json`.
