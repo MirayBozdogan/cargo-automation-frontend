@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { hasSessionHint } from "@/lib/session";
 
 export default function UserShipmentPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const [error, setError] = useState("");
     useEffect(() => {
-        if (!localStorage.getItem("token")) { router.replace("/"); return; }
+        if (!hasSessionHint()) { router.replace("/"); return; }
         let active = true;
         api.get<{ id: number }>("/users/me").then(response => {
             if (!active) return;

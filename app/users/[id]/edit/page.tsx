@@ -40,7 +40,7 @@ function EditUserForm({ user }: { user: CurrentUser }) {
         setSaving(true); setError("");
         try {
             await api.put(`/users/${user.id}`, form);
-            // JWT konusu e-postadır. Değiştiğinde eski token artık bu hesabı bulamaz.
+            // JWT konusu e-postadır. Değiştiğinde eski oturum çerezi artık bu hesabı bulamaz.
             if (form.email !== user.email) {
                 logout();
                 return;

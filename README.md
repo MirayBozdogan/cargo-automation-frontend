@@ -6,11 +6,11 @@ Backend: [cargo-automation-backend](https://github.com/MirayBozdogan/cargo-autom
 
 ## Technologies
 
-Next.js 16.4.5, React 19.2.8, TypeScript, Axios and CSS. Dependency versions are recorded in `package-lock.json`.
+Next.js 16.4.5, React 19.2.8, TypeScript, Axios and CSS. Tests use Vitest and React Testing Library. Dependency versions are recorded in `package-lock.json`.
 
 ## Run locally
 
-Use Node.js 20.9 or newer, npm and Git. Start the backend first by following its [local setup instructions](https://github.com/MirayBozdogan/cargo-automation-backend#local-setup).
+Use Node.js 20.19 or newer, npm and Git. Start the backend first; the quickest way is its [Docker setup](https://github.com/MirayBozdogan/cargo-automation-backend#quick-start-with-docker).
 
 ```sh
 git clone https://github.com/MirayBozdogan/cargo-automation-frontend.git
@@ -19,7 +19,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`. The API client in `lib/api.ts` uses `http://localhost:8080`. The backend permits the frontend origin `http://localhost:3000`; a different hostname or port requires matching changes in the API/CORS configuration. If port 3000 is busy, resolve the conflict before using a fallback port.
+Open `http://localhost:3000`. The API client in `lib/api.ts` uses `NEXT_PUBLIC_API_URL`, or `http://localhost:8080` when it is not set. To use another backend address, copy `.env.example` to `.env.local`, change the value and restart `npm run dev` (the value is built into the bundle). The backend permits the frontend origin through its `CORS_ALLOWED_ORIGINS` setting (default `http://localhost:3000`); if the frontend runs on another port or host, add that origin there too.
 
 There is no default shared account. Customers register through Kayıt Ol. To use admin/staff screens, create the first local admin using the backend's development initializer and then add staff through Personel Yönetimi.
 
@@ -42,7 +42,7 @@ There is no default shared account. Customers register through Kayıt Ol. To use
 
 Staff/admin create a shipment for a customer from Müşteriler → Adına gönderi oluştur. This opens the same shipment form with the selected customer and permitted addresses. Customers do not see the customer, operation, staff or report management links.
 
-The existing own-profile edit route is `/users/{id}/edit`; it is not currently linked from the profile screen. It sends only editable fields. An email change requires signing in again because the JWT subject is the email.
+Profilim → Bilgilerimi düzenle opens the own-profile edit route `/users/{id}/edit`. It sends only editable fields. An email change requires signing in again because the JWT subject is the email.
 
 ## Shipment flow
 
@@ -56,17 +56,20 @@ The price preview uses the backend calculation, and saving recalculates the pric
 
 ## Authentication
 
-The shared AuthProvider reads `/users/me` for the current account and role. The Axios client adds the local JWT to protected requests. A rejected/expired token clears the local session and returns to login. Server-side authorization remains authoritative even when a menu link is hidden.
+The backend stores the JWT in an `HttpOnly` cookie on login, so page JavaScript cannot read it; the Axios client sends it with `withCredentials`. The browser keeps only a non-secret `signedIn` marker in localStorage to skip the session check for visitors who never signed in. The shared AuthProvider reads `/users/me` for the current account and role. A rejected/expired session clears the marker and returns to login; Çıkış yap asks the backend to expire the cookie. Server-side authorization remains authoritative even when a menu link is hidden.
 
-JWTs are stored in browser localStorage for this local project. There is no password-reset or email-verification flow in the current version.
+There is no password-reset or email-verification flow in the current version.
 
 ## Checks and production build
 
 ```sh
+npm test
 npm run lint
 npm run build
 npm run start
 ```
+
+`npm test` runs the Vitest unit tests once (`npm run test:watch` keeps them running). They cover the API client's cookie/401 handling, the session marker, login, logout and the profile screen; they do not start the backend.
 
 The default build uses Turbopack. `npm run start` serves the compiled frontend on port 3000; keep the backend running separately. The backend's automated tests and isolated test command are documented in its repository.
 

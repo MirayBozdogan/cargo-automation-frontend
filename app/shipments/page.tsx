@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
+import { hasSessionHint } from "@/lib/session";
 
 interface Sender { id: number; name: string; surname: string; active: boolean }
 interface User extends Sender { role: "USER" | "STAFF" | "ADMIN" }
@@ -68,7 +69,7 @@ function ShipmentForm({ requestedSenderId }: { requestedSenderId: number | null 
     const formatPrice = (price: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(price);
     const [created, setCreated] = useState<ShipmentResponse | null>(null);
     useEffect(() => {
-        if (!localStorage.getItem("token")) { router.replace("/"); return; }
+        if (!hasSessionHint()) { router.replace("/"); return; }
         let active = true;
         async function load() {
             try {

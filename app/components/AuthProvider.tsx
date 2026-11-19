@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { clearSignedIn, hasSessionHint } from "@/lib/session";
 
 export interface CurrentUser {
     id: number; name: string; surname: string; email: string;
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         let active = true;
         async function load() {
-            if (!localStorage.getItem("token")) {
+            if (!hasSessionHint()) {
                 if (active) setSnapshot({ key, user: null, error: "" });
                 return;
             }
@@ -41,7 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [key]);
     const current = snapshot?.key === key ? snapshot : null;
     function logout() {
-        localStorage.removeItem("token");
+        // HttpOnly çerezi yalnız backend silebilir. İstek başarısız olsa da yerel oturum kapatılır.
+        void api.post("/auth/logout").catch(() => undefined);
+        clearSignedIn();
         setSnapshot({ key, user: null, error: "" });
         router.replace("/");
     }

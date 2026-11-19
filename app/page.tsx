@@ -4,6 +4,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import { markSignedIn } from "@/lib/session";
 import AuthShell from "./components/AuthShell";
 
 function LoginForm() {
@@ -21,10 +22,9 @@ function LoginForm() {
         setError("");
         setIsSubmitting(true);
         try {
-            const response = await api.post<string>("/auth/login", {
-                email: email.trim(), password,
-            });
-            localStorage.setItem("token", response.data);
+            // Backend JWT'yi HttpOnly çerez olarak yazar; yanıtta token yoktur.
+            await api.post("/auth/login", { email: email.trim(), password });
+            markSignedIn();
             router.replace("/profile");
         } catch (error: unknown) {
             setError(axios.isAxiosError<{ message: string }>(error)

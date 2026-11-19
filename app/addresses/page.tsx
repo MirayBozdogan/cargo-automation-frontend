@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import { hasSessionHint } from "@/lib/session";
 
 type Location = { id: number; name: string };
 type Address = { id: number; city: Location; district: Location; neighborhood: string; buildingNo: number | null; apartmentNo: number | null };
@@ -24,7 +25,7 @@ export default function AddressesPage() {
     const [districtError, setDistrictError] = useState("");
     const [success, setSuccess] = useState("");
     useEffect(() => {
-        if (!localStorage.getItem("token")) { router.replace("/"); return; }
+        if (!hasSessionHint()) { router.replace("/"); return; }
         let active = true;
         async function load() {
             try {
