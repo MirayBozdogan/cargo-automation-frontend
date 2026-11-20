@@ -1,0 +1,61 @@
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: none;
+  margin: 8px 0 28px;
+}
+.totals > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+.totals dt, .totals dd { padding: 0; border: 0; }
+.totals dt { font-size: 13.5px; }
+.totals dd { color: var(--navy); font-size: 30px; font-weight: 700; line-height: 1.15; letter-spacing: -.5px; }
+.icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--teal);
+  background: var(--teal-soft);
+}
+.iconDelivered { color: #15803d; background: #ecf8ef; }
+.iconOut { color: #a14d00; background: #fff5e6; }
+
+.distribution { padding: 22px 24px; border: 1px solid var(--line); border-radius: 14px; }
+.distribution h2 { margin: 0 0 16px; font-size: 16px; }
+.distribution ul { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.distribution li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 48px 48px;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+}
+.label { color: #33495a; font-weight: 600; }
+.track { height: 10px; border-radius: 999px; background: #edf1f4; overflow: hidden; }
+.bar { display: block; height: 100%; min-width: 2px; border-radius: 999px; }
+.distribution strong { color: var(--navy); text-align: right; }
+.percent { color: var(--muted); font-size: 13px; text-align: right; }
+.created { background: #98a2b3; }
+.accepted { background: #3b82f6; }
+.ready { background: #8b5cf6; }
+.out { background: #f59e0b; }
+.delivered { background: #22a35a; }
+.note { margin-top: 14px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 760px) {
+  .totals { grid-template-columns: 1fr; }
+  .distribution li { grid-template-columns: 110px minmax(0, 1fr) 36px; }
+  .percent { display: none; }
+}

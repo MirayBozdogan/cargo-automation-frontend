@@ -7,10 +7,10 @@ Backend: [cargo-automation-backend](https://github.com/MirayBozdogan/cargo-autom
 ## Preview
 
 <p align="center">
-  <img src="docs/screenshots/gonderi-yasam-dongusu.gif" width="720" alt="An admin moves a shipment from Oluşturuldu to Teslim edildi: accept, prepare, assign a courier and record delivery">
+  <img src="docs/screenshots/gonderi-yasam-dongusu.gif" width="720" alt="A customer creates a shipment and sees the price preview, an admin accepts, prepares, assigns a courier and records delivery, then the customer tracks it as Teslim edildi">
 </p>
 
-<p align="center"><sub>One shipment from creation to delivery: accept, prepare, assign a courier and record delivery. Recorded with fictional demo data.</sub></p>
+<p align="center"><sub>A customer creates a shipment, an admin moves it from acceptance to delivery, and the customer tracks the result. Recorded with fictional demo data.</sub></p>
 
 ## Architecture
 

@@ -6,6 +6,9 @@ import axios from "axios";
 import api from "@/lib/api";
 import { useAuth, type CurrentUser } from "../../components/AuthProvider";
 import { statusLabels, dateFormat, currency } from "@/lib/shipment-display";
+import StatusBadge from "../../components/StatusBadge";
+import { PinIcon, PlusBoxIcon } from "../../components/icons";
+import styles from "./page.module.css";
 
 interface Address { id: number; neighborhood: string; buildingNo: number | null; apartmentNo: number | null; city: { name: string }; district: { name: string } }
 interface Shipment {
@@ -95,51 +98,65 @@ function UserDetailContent({ user }: { user: CurrentUser }) {
         finally { setDeletingId(null); }
     }
     return <main>
-        <h1>Gönderilerim</h1>
-        <p>ID: {user.id}</p><p>Ad: {user.name}</p><p>Soyad: {user.surname}</p>
-        <p>E-posta: {user.email}</p><p>Telefon: {user.telNo ?? "—"}</p><p>Yaş: {user.age}</p><p>TC: {user.tc ?? "—"}</p>
-        <button onClick={() => router.push("/shipments")}>+ Gönderi Oluştur</button>
-        <h2>Adresler</h2>
-        {addressesLoading ? <p role="status">Adresler yükleniyor...</p>
-            : addressError ? <div role="alert"><p>{addressError}</p><button onClick={() => {
-                setAddressesLoading(true); setAddressError(""); setAddressRevision(current => current + 1);
-            }}>Adresleri tekrar yükle</button></div>
-                : addresses.length === 0 ? <p>Bu kullanıcının kayıtlı adresi yok.</p> : <div className="staff-table-container"><table>
-            <caption>Kayıtlı adreslerin</caption>
-            <thead><tr><th>ID</th><th>Şehir</th><th>İlçe</th><th>Mahalle</th><th>Bina No</th><th>Daire No</th></tr></thead>
-            <tbody>{addresses.map(address => <tr key={address.id}>
-                <td>{address.id}</td><td>{address.city.name}</td><td>{address.district.name}</td>
-                <td>{address.neighborhood}</td><td>{address.buildingNo ?? "—"}</td><td>{address.apartmentNo ?? "—"}</td>
-            </tr>)}</tbody>
-        </table></div>}
-        <h2>Gönderi listesi</h2><p>Gönderici veya alıcı olduğun gönderiler burada listelenir.</p>
-        <button disabled={shipmentsLoading || deletingId !== null} onClick={() => {
-            setShipmentsLoading(true); setShipmentError(""); setRevision(current => current + 1);
-        }}>Gönderileri yenile</button>
+        <div className="page-head">
+            <div>
+                <p className="eyebrow">Hesabım</p>
+                <h1>Gönderilerim</h1>
+                <p>Gönderici veya alıcı olduğun gönderiler burada listelenir.</p>
+            </div>
+            <button className="button-primary" onClick={() => router.push("/shipments")}><PlusBoxIcon /> Gönderi Oluştur</button>
+        </div>
+        <dl className={styles.info} aria-label="Hesap bilgileri">
+            <div><dt>Ad soyad</dt><dd>{user.name} {user.surname}</dd></div>
+            <div><dt>E-posta</dt><dd>{user.email}</dd></div>
+            <div><dt>Telefon</dt><dd>{user.telNo ?? "—"}</dd></div>
+            <div><dt>Müşteri no</dt><dd>{user.id}</dd></div>
+        </dl>
+
+        <div className={styles.sectionHead}>
+            <h2>Gönderi listesi</h2>
+            <button disabled={shipmentsLoading || deletingId !== null} onClick={() => {
+                setShipmentsLoading(true); setShipmentError(""); setRevision(current => current + 1);
+            }}>Gönderileri yenile</button>
+        </div>
         {deleteError && <p role="alert" className="error-box error-400">{deleteError}</p>}
-        {shipmentError && <div role="alert"><p>{shipmentError}</p><button disabled={shipmentsLoading} onClick={() => {
+        {shipmentError && <div role="alert" className="error-box error-500"><p>{shipmentError}</p><button disabled={shipmentsLoading} onClick={() => {
             setShipmentError(""); setShipmentsLoading(true); setRevision(current => current + 1);
         }}>Tekrar dene</button></div>}
         {shipmentsLoading ? <p role="status">Gönderiler yükleniyor...</p> : !shipmentError && result && <>
-            {result.totalElements === 0 ? <p>Henüz gönderin yok.</p> : <>
-                <p>Toplam {result.totalElements} gönderi</p>
-                <div className="staff-table-container"><table className="customer-shipments-table"><thead><tr><th>ID</th><th>Barkod</th><th>Gönderici</th><th>Alıcı</th><th>Alıcı Adresi</th><th>Ağırlık</th><th>Fiyat</th><th>Durum</th><th>Oluşturulma</th><th>Teslim zamanı</th><th>İşlem</th></tr></thead>
+            {result.totalElements === 0 ? <p className={styles.empty}>Henüz gönderin yok. İlk gönderini oluşturmak için <b>Gönderi Oluştur</b>&apos;a tıkla.</p> : <>
+                <p className="count">Toplam <strong>{result.totalElements}</strong> gönderi</p>
+                <div className="staff-table-container"><table className="customer-shipments-table"><thead><tr><th>Barkod</th><th>Gönderici</th><th>Alıcı</th><th>Alıcı adresi</th><th>Ağırlık</th><th>Fiyat</th><th>Durum</th><th>Oluşturulma</th><th>Teslim zamanı</th><th>İşlem</th></tr></thead>
                     <tbody>{result.content.map(shipment => <tr key={shipment.id}>
-                        <td>{shipment.id}</td><td>{shipment.barcode}</td>
+                        <td className="mono">{shipment.barcode}</td>
                         <td>{shipment.senderName} {shipment.senderSurname}</td><td>{shipment.receiverName} {shipment.receiverSurname}</td>
-                        <td>{shipment.receiverCity} / {shipment.receiverDistrict}<br />{shipment.receiverAddressText}</td>
-                        <td>{shipment.weight}</td><td>{currency.format(shipment.price)}</td>
-                        <td>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</td>
-                        <td>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
-                        <td>{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</td>
-                        <td>{shipment.sender?.id === user.id && (shipment.status === "CREATED" ? <button className="delete-shipment-button" disabled={deletingId !== null}
-                            onClick={() => handleDeleteShipment(shipment.id)}>{deletingId === shipment.id ? "Siliniyor..." : "Sil"}</button> : "Kabul sonrası silinemez")}</td>
+                        <td><span className={styles.city}>{shipment.receiverCity} / {shipment.receiverDistrict}</span><br /><span className="muted">{shipment.receiverAddressText}</span></td>
+                        <td>{shipment.weight} kg</td><td>{currency.format(shipment.price)}</td>
+                        <td><StatusBadge status={shipment.status} /></td>
+                        <td className="muted">{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
+                        <td className="muted">{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</td>
+                        <td>{shipment.sender?.id === user.id && (shipment.status === "CREATED" ? <button className={styles.delete} disabled={deletingId !== null}
+                            onClick={() => handleDeleteShipment(shipment.id)}>{deletingId === shipment.id ? "Siliniyor..." : "Sil"}</button> : <span className="muted">Kabul sonrası silinemez</span>)}</td>
                     </tr>)}</tbody>
                 </table></div>
-                <button disabled={shipmentPage === 0 || deletingId !== null} onClick={() => changePage(shipmentPage - 1)}>Önceki</button>
-                <span style={{ margin: "0 15px" }}>Sayfa {result.number + 1} / {result.totalPages}</span>
-                <button disabled={shipmentPage + 1 >= result.totalPages || deletingId !== null} onClick={() => changePage(shipmentPage + 1)}>Sonraki</button>
+                <div className="pager">
+                    <button disabled={shipmentPage === 0 || deletingId !== null} onClick={() => changePage(shipmentPage - 1)}>Önceki</button>
+                    <span>Sayfa {result.number + 1} / {result.totalPages}</span>
+                    <button disabled={shipmentPage + 1 >= result.totalPages || deletingId !== null} onClick={() => changePage(shipmentPage + 1)}>Sonraki</button>
+                </div>
             </>}
         </>}
+
+        <h2>Adresler</h2>
+        {addressesLoading ? <p role="status">Adresler yükleniyor...</p>
+            : addressError ? <div role="alert" className="error-box error-500"><p>{addressError}</p><button onClick={() => {
+                setAddressesLoading(true); setAddressError(""); setAddressRevision(current => current + 1);
+            }}>Adresleri tekrar yükle</button></div>
+                : addresses.length === 0 ? <p className={styles.empty}>Bu kullanıcının kayıtlı adresi yok.</p>
+                    : <ul className={styles.addresses} aria-label="Kayıtlı adreslerin">{addresses.map(address => <li key={address.id}>
+                        <span className={styles.addressIcon} aria-hidden="true"><PinIcon /></span>
+                        <span><strong>{address.city.name} / {address.district.name}</strong><br />
+                            <span className="muted">{address.neighborhood}{address.buildingNo !== null && `, Bina No: ${address.buildingNo}`}{address.apartmentNo !== null && `, Daire No: ${address.apartmentNo}`}</span></span>
+                    </li>)}</ul>}
     </main>;
 }

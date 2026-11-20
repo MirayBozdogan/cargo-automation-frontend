@@ -5,12 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
-import { currency, dateFormat, fullName, statusLabels } from "@/lib/shipment-display";
+import { currency, dateFormat, fullName, type ShipmentStatus } from "@/lib/shipment-display";
 import CourierAssignment from "../../components/CourierAssignment";
 import { useAuth } from "../../components/AuthProvider";
+import StatusBadge from "../../components/StatusBadge";
+import StatusTimeline from "../../components/StatusTimeline";
+import { ArrowLeftIcon, ClockIcon, PackageIcon, PinIcon, SenderIcon, TruckIcon } from "../../components/icons";
+import styles from "./page.module.css";
 
 interface ShipmentDetail {
-    id: number; barcode: string; status: keyof typeof statusLabels;
+    id: number; barcode: string; status: ShipmentStatus;
     width: number | null; length: number | null; height: number | null; weight: number | null; price: number | null;
     senderName: string | null; senderSurname: string | null; senderCity: string | null;
     senderDistrict: string | null; senderAddressText: string | null;
@@ -25,6 +29,15 @@ function location(city: string | null, district: string | null) {
 function measurement(value: number | null, unit: string) {
     return value === null ? "—" : `${value} ${unit}`;
 }
+function formatTime(value: string | null) {
+    return value ? <time dateTime={value}>{dateFormat.format(new Date(value))}</time> : "—";
+}
+// Panelde, sıradaki işlemi kısaca açıklar.
+const nextStepText: Partial<Record<ShipmentStatus, string>> = {
+    CREATED: "Gönderiyi kontrol et ve kabul et.",
+    ACCEPTED: "Paket hazır olduğunda dağıtıma hazırla.",
+    OUT_FOR_DELIVERY: "Gönderi kuryede. Alıcıya ulaştığında teslim kaydını oluştur.",
+};
 export default function OperationDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { user, loading, error, reload } = useAuth();
@@ -110,66 +123,85 @@ function ShipmentDetailView({ id, userId, role }: { id: string; userId: number; 
             if (mounted.current) setActionBusy(false);
         }
     }
-    return <main>
-        <p><Link href="/operations">← Gönderi listesine dön</Link></p>
-        <h1>Gönderi Detayı</h1>
-        {loading ? <p role="status">Gönderi detayı yükleniyor...</p>
-            : error ? <div role="alert" className="error-box error-500"><p>{error}</p>{retryable && <button onClick={retry}>Tekrar dene</button>}</div>
+    const courierName = shipment?.courier ? fullName(shipment.courier.name, shipment.courier.surname) : null;
+    return <main className={styles.page}>
+        <Link className={styles.back} href="/operations"><ArrowLeftIcon /> Gönderi listesine dön</Link>
+        {loading ? <section className={styles.card}><h1>Gönderi Detayı</h1><p role="status">Gönderi detayı yükleniyor...</p></section>
+            : error ? <section className={styles.card}><h1>Gönderi Detayı</h1>
+                <div role="alert" className="error-box error-500"><p>{error}</p>{retryable && <button onClick={retry}>Tekrar dene</button>}</div></section>
                 : shipment && <>
-                    <section aria-labelledby="shipment-overview">
-                        <h2 id="shipment-overview">Gönderi bilgileri</h2>
-                        <dl>
-                            <dt>Barkod</dt><dd>{shipment.barcode}</dd>
-                            <dt>Durum</dt><dd>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</dd>
-                            <dt>Ücret</dt><dd>{shipment.price === null ? "—" : currency.format(shipment.price)}</dd>
-                            <dt>Oluşturulma</dt><dd>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</dd>
-                            <dt>Kurye</dt><dd>{shipment.courier ? fullName(shipment.courier.name, shipment.courier.surname) : "Henüz atanmadı"}</dd>
-                            <dt>Teslim zamanı</dt><dd>{shipment.deliveredAt ? <time dateTime={shipment.deliveredAt}>{dateFormat.format(new Date(shipment.deliveredAt))}</time> : "—"}</dd>
-                        </dl>
+                    <header className={`${styles.card} ${styles.header}`}>
+                        <div className={styles.headerMain}>
+                            <p className="eyebrow">Gönderi Detayı · #{shipment.id}</p>
+                            <h1 className={styles.barcode}><span className={styles.srOnly}>Barkod </span>{shipment.barcode}</h1>
+                            <div className={styles.meta}>
+                                <StatusBadge status={shipment.status} />
+                                <span><ClockIcon /> Oluşturulma {formatTime(shipment.createdAt)}</span>
+                            </div>
+                        </div>
+                        <div className={styles.price}>
+                            <span>Ücret</span>
+                            <strong>{shipment.price === null ? "—" : currency.format(shipment.price)}</strong>
+                        </div>
+                    </header>
+
+                    <section className={styles.card} aria-labelledby="shipment-progress">
+                        <h2 id="shipment-progress" className={styles.cardTitle}>Gönderi süreci</h2>
+                        <StatusTimeline status={shipment.status} createdAt={shipment.createdAt}
+                            deliveredAt={shipment.deliveredAt} courierName={courierName} />
                     </section>
-                    <section aria-labelledby="shipment-actions">
-                        <h2 id="shipment-actions">Gönderi işlemleri</h2>
-                        {actionSuccess && <p role="status">{actionSuccess}</p>}
-                        {actionError && <p role="alert" className="error-box error-400">{actionError}</p>}
-                        {!actionBlocked && shipment.status === "CREATED" && <button className="button-primary" disabled={actionBusy}
-                            onClick={() => performAction("accept")}>{actionBusy ? "İşleniyor..." : "Kabul et"}</button>}
-                        {!actionBlocked && shipment.status === "ACCEPTED" && <button className="button-primary" disabled={actionBusy}
-                            onClick={() => performAction("prepare")}>{actionBusy ? "İşleniyor..." : "Dağıtıma hazırla"}</button>}
-                        {!actionBlocked && shipment.status === "READY_FOR_DISTRIBUTION" && <CourierAssignment
-                            key={courierRevision} busy={actionBusy} onAssign={courierId => performAction("assign-courier", courierId)} />}
-                        {!actionBlocked && shipment.status === "OUT_FOR_DELIVERY" && (role === "ADMIN" || shipment.courier?.id === userId) &&
-                            <button className="button-primary" disabled={actionBusy} onClick={() => performAction("deliver")}>
-                                {actionBusy ? "İşleniyor..." : "Teslim edildi olarak kaydet"}</button>}
-                        {shipment.status === "OUT_FOR_DELIVERY" && role !== "ADMIN" && shipment.courier?.id !== userId &&
-                            <p>Teslim kaydını yalnız atanan personel veya yönetici yapabilir.</p>}
-                        {shipment.status === "DELIVERED" && <p>Gönderi teslim edildi. İşlem tamamlandı.</p>}
-                        <p><Link href="/deliveries">Dağıtımdaki gönderileri görüntüle</Link></p>
-                    </section>
-                    <section aria-labelledby="sender-details">
-                        <h2 id="sender-details">Gönderici ve çıkış adresi</h2>
-                        <dl>
-                            <dt>Ad soyad</dt><dd>{fullName(shipment.senderName, shipment.senderSurname)}</dd>
-                            <dt>Şehir / ilçe</dt><dd>{location(shipment.senderCity, shipment.senderDistrict)}</dd>
-                            <dt>Açık adres</dt><dd>{shipment.senderAddressText || "—"}</dd>
-                        </dl>
-                    </section>
-                    <section aria-labelledby="receiver-details">
-                        <h2 id="receiver-details">Alıcı ve teslimat adresi</h2>
-                        <dl>
-                            <dt>Ad soyad</dt><dd>{fullName(shipment.receiverName, shipment.receiverSurname)}</dd>
-                            <dt>Şehir / ilçe</dt><dd>{location(shipment.receiverCity, shipment.receiverDistrict)}</dd>
-                            <dt>Açık adres</dt><dd>{shipment.receiverAddressText || "—"}</dd>
-                        </dl>
-                    </section>
-                    <section aria-labelledby="shipment-measurements">
-                        <h2 id="shipment-measurements">Paket ölçüleri</h2>
-                        <dl>
-                            <dt>En</dt><dd>{measurement(shipment.width, "cm")}</dd>
-                            <dt>Boy</dt><dd>{measurement(shipment.length, "cm")}</dd>
-                            <dt>Yükseklik</dt><dd>{measurement(shipment.height, "cm")}</dd>
-                            <dt>Ağırlık</dt><dd>{measurement(shipment.weight, "kg")}</dd>
-                        </dl>
-                    </section>
+
+                    <div className={styles.layout}>
+                        <aside className={`${styles.card} ${styles.panel}`} aria-labelledby="shipment-actions">
+                            <h2 id="shipment-actions" className={styles.cardTitle}>Gönderi işlemleri</h2>
+                            {actionSuccess && <p role="status" className={styles.success}>{actionSuccess}</p>}
+                            {actionError && <p role="alert" className="error-box error-400">{actionError}</p>}
+                            {!actionBlocked && nextStepText[shipment.status] && <p className={styles.hint}>{nextStepText[shipment.status]}</p>}
+                            {!actionBlocked && shipment.status === "CREATED" && <button className="button-primary" disabled={actionBusy}
+                                onClick={() => performAction("accept")}>{actionBusy ? "İşleniyor..." : "Kabul et"}</button>}
+                            {!actionBlocked && shipment.status === "ACCEPTED" && <button className="button-primary" disabled={actionBusy}
+                                onClick={() => performAction("prepare")}>{actionBusy ? "İşleniyor..." : "Dağıtıma hazırla"}</button>}
+                            {!actionBlocked && shipment.status === "READY_FOR_DISTRIBUTION" && <CourierAssignment
+                                key={courierRevision} busy={actionBusy} onAssign={courierId => performAction("assign-courier", courierId)} />}
+                            {!actionBlocked && shipment.status === "OUT_FOR_DELIVERY" && (role === "ADMIN" || shipment.courier?.id === userId) &&
+                                <button className="button-primary" disabled={actionBusy} onClick={() => performAction("deliver")}>
+                                    {actionBusy ? "İşleniyor..." : "Teslim edildi olarak kaydet"}</button>}
+                            {shipment.status === "OUT_FOR_DELIVERY" && role !== "ADMIN" && shipment.courier?.id !== userId &&
+                                <p className={styles.hint}>Teslim kaydını yalnız atanan personel veya yönetici yapabilir.</p>}
+                            {shipment.status === "DELIVERED" && <p className={styles.done}>Gönderi teslim edildi. İşlem tamamlandı.</p>}
+                            <dl className={styles.facts}>
+                                <div><dt><TruckIcon /> Kurye</dt><dd>{courierName ?? "Henüz atanmadı"}</dd></div>
+                                <div><dt><ClockIcon /> Teslim zamanı</dt><dd>{formatTime(shipment.deliveredAt)}</dd></div>
+                            </dl>
+                            <Link className={styles.panelLink} href="/deliveries">Dağıtımdaki gönderileri görüntüle</Link>
+                        </aside>
+
+                        <div className={styles.mainColumn}>
+                            <div className={styles.parties}>
+                                <section className={styles.card} aria-labelledby="sender-details">
+                                    <h2 id="sender-details" className={styles.cardTitle}><span className={styles.icon}><SenderIcon /></span>Gönderici</h2>
+                                    <p className={styles.person}>{fullName(shipment.senderName, shipment.senderSurname)}</p>
+                                    <p className={styles.place}>{location(shipment.senderCity, shipment.senderDistrict)}</p>
+                                    <p className={styles.address}>{shipment.senderAddressText || "Açık adres girilmemiş"}</p>
+                                </section>
+                                <section className={styles.card} aria-labelledby="receiver-details">
+                                    <h2 id="receiver-details" className={styles.cardTitle}><span className={styles.icon}><PinIcon /></span>Alıcı</h2>
+                                    <p className={styles.person}>{fullName(shipment.receiverName, shipment.receiverSurname)}</p>
+                                    <p className={styles.place}>{location(shipment.receiverCity, shipment.receiverDistrict)}</p>
+                                    <p className={styles.address}>{shipment.receiverAddressText || "Açık adres girilmemiş"}</p>
+                                </section>
+                            </div>
+                            <section className={styles.card} aria-labelledby="shipment-measurements">
+                                <h2 id="shipment-measurements" className={styles.cardTitle}><span className={styles.icon}><PackageIcon /></span>Paket ölçüleri</h2>
+                                <dl className={styles.stats}>
+                                    <div><dt>En</dt><dd>{measurement(shipment.width, "cm")}</dd></div>
+                                    <div><dt>Boy</dt><dd>{measurement(shipment.length, "cm")}</dd></div>
+                                    <div><dt>Yükseklik</dt><dd>{measurement(shipment.height, "cm")}</dd></div>
+                                    <div><dt>Ağırlık</dt><dd>{measurement(shipment.weight, "kg")}</dd></div>
+                                </dl>
+                            </section>
+                        </div>
+                    </div>
                 </>}
     </main>;
 }

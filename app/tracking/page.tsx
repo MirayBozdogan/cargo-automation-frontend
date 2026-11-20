@@ -6,6 +6,9 @@ import axios from "axios";
 import api from "@/lib/api";
 import { useAuth } from "../components/AuthProvider";
 import { dateFormat, statusLabels } from "@/lib/shipment-display";
+import StatusBadge from "../components/StatusBadge";
+import StatusTimeline from "../components/StatusTimeline";
+import styles from "./page.module.css";
 
 interface TrackingResult { barcode: string; status: keyof typeof statusLabels; createdAt: string | null; deliveredAt: string | null }
 export default function TrackingPage() {
@@ -49,26 +52,34 @@ function TrackingForm() {
         }
     }
     return <main>
+        <p className="eyebrow">Hesabım</p>
         <h1>Kargo Takibi</h1>
         <p>Gönderici veya alıcı olduğun gönderilerin güncel durumunu barkodla sorgulayabilirsin.</p>
-        <form onSubmit={search}>
-            <fieldset disabled={busy} className="registration-fields">
+        <form onSubmit={search} className={styles.search}>
+            <fieldset disabled={busy}>
                 <label htmlFor="trackingBarcode">Barkod</label>
-                <input id="trackingBarcode" required minLength={12} maxLength={12} pattern="[A-Za-z0-9]{12}" autoComplete="off"
-                    placeholder="12 karakterli barkod" value={barcode} onChange={event => { setBarcode(event.target.value); setResult(null); setError(""); }} />
-                <button type="submit">{busy ? "Sorgulanıyor..." : "Gönderiyi sorgula"}</button>
+                <div className={styles.searchRow}>
+                    <input id="trackingBarcode" required minLength={12} maxLength={12} pattern="[A-Za-z0-9]{12}" autoComplete="off"
+                        placeholder="12 karakterli barkod" value={barcode} onChange={event => { setBarcode(event.target.value); setResult(null); setError(""); }} />
+                    <button type="submit">{busy ? "Sorgulanıyor..." : "Gönderiyi sorgula"}</button>
+                </div>
             </fieldset>
         </form>
         {error && <p role="alert" className="error-box error-400">{error}</p>}
-        {result && <section aria-labelledby="tracking-result">
-            <h2 id="tracking-result">Güncel gönderi durumu</h2>
-            <dl>
-                <dt>Barkod</dt><dd>{result.barcode}</dd>
-                <dt>Durum</dt><dd>{statusLabels[result.status] ?? "Bilinmeyen durum"}</dd>
-                <dt>Oluşturulma</dt><dd>{result.createdAt ? <time dateTime={result.createdAt}>{dateFormat.format(new Date(result.createdAt))}</time> : "—"}</dd>
-                <dt>Teslim zamanı</dt><dd>{result.deliveredAt ? <time dateTime={result.deliveredAt}>{dateFormat.format(new Date(result.deliveredAt))}</time> : "—"}</dd>
+        {result && <section aria-labelledby="tracking-result" className={styles.result}>
+            <div className={styles.resultHead}>
+                <div>
+                    <h2 id="tracking-result">Güncel gönderi durumu</h2>
+                    <p className={`mono ${styles.barcode}`}>{result.barcode}</p>
+                </div>
+                <StatusBadge status={result.status} />
+            </div>
+            <StatusTimeline status={result.status} createdAt={result.createdAt} deliveredAt={result.deliveredAt} courierName={null} />
+            <dl className={styles.facts}>
+                <div><dt>Oluşturulma</dt><dd>{result.createdAt ? <time dateTime={result.createdAt}>{dateFormat.format(new Date(result.createdAt))}</time> : "—"}</dd></div>
+                <div><dt>Teslim zamanı</dt><dd>{result.deliveredAt ? <time dateTime={result.deliveredAt}>{dateFormat.format(new Date(result.deliveredAt))}</time> : "—"}</dd></div>
             </dl>
-            <p role="status">{statusLabels[result.status] ?? "Bilinmeyen durum"}</p>
+            <p role="status" className={styles.srOnly}>{statusLabels[result.status] ?? "Bilinmeyen durum"}</p>
         </section>}
     </main>;
 }

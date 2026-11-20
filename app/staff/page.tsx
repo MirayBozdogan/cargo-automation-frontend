@@ -81,30 +81,38 @@ function StaffManagement() {
         finally { setBusy(false); }
     }
     return <main>
-        <h1>Personel Yönetimi</h1>
-        <div className="staff-actions">
-            <button disabled={busy || formVisible} onClick={() => { setEditing(null); setFormVisible(true); setOperationError(""); setSuccess(""); }}>Yeni personel ekle</button>
-            <button disabled={busy || loading} onClick={refresh}>Listeyi yenile</button>
+        <div className="page-head">
+            <div>
+                <p className="eyebrow">Yönetim</p>
+                <h1>Personel Yönetimi</h1>
+                <p>Personel hesaplarını ekle, düzenle veya pasif yap. Aktif personel kurye olarak atanabilir.</p>
+            </div>
+            <div className="staff-actions">
+                <button className="button-primary" disabled={busy || formVisible} onClick={() => { setEditing(null); setFormVisible(true); setOperationError(""); setSuccess(""); }}>Yeni personel ekle</button>
+                <button disabled={busy || loading} onClick={refresh}>Listeyi yenile</button>
+            </div>
         </div>
-        {success && <p role="status">{success}</p>}
+        {success && <p role="status" className="notice-success">{success}</p>}
         {operationError && <p role="alert" className="deleteError">{operationError}</p>}
         {formVisible && <StaffForm key={editing?.id ?? "new"} staff={editing} busy={busy} onSave={save} onCancel={() => { setFormVisible(false); setEditing(null); }} />}
         {loading ? <p role="status">Personel listesi yükleniyor...</p> : listError ? <div role="alert"><p>{listError}</p><button onClick={refresh}>Tekrar dene</button></div>
             : result && <>
                 {result.totalElements === 0 ? <p>Henüz personel kaydı yok.</p> : <>
-                    <p>Toplam {result.totalElements} personel</p>
+                    <p className="count">Toplam <strong>{result.totalElements}</strong> personel</p>
                     <div className="staff-table-container"><table>
                         <caption>Aktif ve pasif personeller</caption>
                         <thead><tr><th>ID</th><th>Ad soyad</th><th>E-posta</th><th>Telefon</th><th>Durum</th><th>İşlemler</th></tr></thead>
                         <tbody>{result.content.map(staff => <tr key={staff.id}>
-                            <td>{staff.id}</td><td>{staff.name} {staff.surname}</td><td>{staff.email}</td><td>{staff.telNo}</td><td>{staff.active ? "Aktif" : "Pasif"}</td>
+                            <td className="muted">{staff.id}</td><td>{staff.name} {staff.surname}</td><td>{staff.email}</td><td>{staff.telNo}</td><td><span className={`pill ${staff.active ? "pill-active" : "pill-passive"}`}>{staff.active ? "Aktif" : "Pasif"}</span></td>
                             <td><button disabled={busy || formVisible} aria-label={`${staff.name} ${staff.surname} bilgilerini düzenle`} onClick={() => beginEdit(staff)}>Düzenle</button>
                                 <button disabled={busy || formVisible} aria-label={`${staff.name} ${staff.surname} ${staff.active ? "pasif" : "aktif"} yap`} onClick={() => toggleActivity(staff)}>{staff.active ? "Pasif yap" : "Aktif yap"}</button></td>
                         </tr>)}</tbody>
                     </table></div>
-                    <button disabled={page === 0 || busy || formVisible} onClick={() => changePage(page - 1)}>Önceki</button>
-                    <span>Sayfa {result.number + 1} / {result.totalPages}</span>
-                    <button disabled={page + 1 >= result.totalPages || busy || formVisible} onClick={() => changePage(page + 1)}>Sonraki</button>
+                    <div className="pager">
+                        <button disabled={page === 0 || busy || formVisible} onClick={() => changePage(page - 1)}>Önceki</button>
+                        <span>Sayfa {result.number + 1} / {result.totalPages}</span>
+                        <button disabled={page + 1 >= result.totalPages || busy || formVisible} onClick={() => changePage(page + 1)}>Sonraki</button>
+                    </div>
                 </>}
             </>}
     </main>;

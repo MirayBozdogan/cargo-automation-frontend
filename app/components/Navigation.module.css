@@ -1,0 +1,61 @@
+/* Ortak marka */
+.brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; white-space: nowrap; }
+.brand:hover { text-decoration: none; }
+.brandIcon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; color: #fff; background: var(--teal); }
+.brandText { display: flex; flex-direction: column; font-size: 15px; font-weight: 700; line-height: 1.15; letter-spacing: -.2px; }
+.brandText span { font-size: 12px; font-weight: 500; letter-spacing: .3px; opacity: .7; }
+.status { margin: 0; font-size: 14px; color: var(--muted); }
+
+.user { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--teal); background: #e3f2ef; }
+.userText { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.userName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+.role { font-size: 12px; opacity: .7; }
+.logout { gap: 6px; min-height: 34px; padding: 6px 12px; font-size: 13px; }
+
+/* Misafir ve müşteri: açık renkli üst menü */
+.topbar { position: sticky; top: 0; z-index: 20; background: #ffffffe6; backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); color: var(--navy); }
+.topInner { display: flex; align-items: center; gap: 12px 28px; max-width: 1200px; margin: auto; padding: 12px 24px; flex-wrap: wrap; }
+.topLinks { display: flex; flex: 1; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+.customerLinks { justify-content: center; }
+.topLinks a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 9px; color: #46596a; font-size: 14px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.topLinks a:hover { color: var(--navy); background: #f0f4f7; text-decoration: none; }
+.topLinks a[aria-current="page"] { color: var(--teal); background: #e7f4f2; }
+.topAccount { display: flex; align-items: center; gap: 14px; }
+.topAccount .user { padding-right: 14px; border-right: 1px solid var(--line); }
+
+/* Personel ve yönetici: koyu sol kenar menü */
+.sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; background: var(--navy); color: #dbe6ec; }
+.sidebarTop { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 18px; color: #fff; }
+.menuButton { display: none; }
+.sidebarNav { display: flex; flex: 1; flex-direction: column; gap: 18px; padding: 6px 12px 16px; overflow-y: auto; }
+.group { display: flex; flex-direction: column; gap: 2px; }
+.groupTitle { margin: 0 0 6px; padding: 0 10px; color: #7f9aab; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.group a { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 9px; color: #c9d7df; font-size: 14px; font-weight: 500; text-decoration: none; }
+.group a:hover { color: #fff; background: #ffffff10; text-decoration: none; }
+.group a[aria-current="page"] { color: #fff; background: #ffffff17; box-shadow: inset 3px 0 #5fd0bd; }
+.group a svg { flex: none; opacity: .85; }
+.sidebarFooter { display: grid; gap: 12px; margin-top: auto; padding: 16px 10px 4px; border-top: 1px solid #ffffff1a; }
+.sidebarFooter .userName { color: #fff; }
+.sidebarFooter .avatar { color: var(--navy); background: #9fe4d7; }
+.sidebarFooter .logout { justify-content: flex-start; color: #dbe6ec; background: transparent; border-color: #ffffff2b; }
+.sidebarFooter .logout:hover:not(:disabled) { color: #fff; background: #ffffff10; border-color: #ffffff45; }
+
+@media (max-width: 900px) {
+  .topAccount .userText { display: none; }
+  .customerLinks { order: 3; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+  .topAccount { margin-left: auto; }
+
+  .sidebar { position: sticky; z-index: 20; height: auto; }
+  .sidebarTop { padding: 12px 16px; }
+  .menuButton { display: inline-flex; gap: 6px; min-height: 38px; color: #fff; background: transparent; border-color: #ffffff33; }
+  .menuButton:hover:not(:disabled) { background: #ffffff12; border-color: #ffffff55; }
+  .sidebarNav { display: none; max-height: calc(100dvh - 64px); padding-top: 0; }
+  .sidebarNav.open { display: flex; }
+}
+@media (max-width: 520px) {
+  .topInner { padding: 10px 14px; }
+  .brandText span { display: none; }
+  .topLinks a { padding: 7px 9px; font-size: 13px; }
+  .topLinks a svg { display: none; }
+}

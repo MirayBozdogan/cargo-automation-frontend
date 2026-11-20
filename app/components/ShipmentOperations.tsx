@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { statusLabels, currency, dateFormat, fullName } from "@/lib/shipment-display";
 import { useAuth } from "./AuthProvider";
+import StatusBadge from "./StatusBadge";
+import { ArrowRightIcon } from "./icons";
 
 interface ShipmentSummary {
     id: number; barcode: string; status: keyof typeof statusLabels;
@@ -70,39 +72,44 @@ function ShipmentList({ fixedStatus, title }: { fixedStatus?: keyof typeof statu
         setRequest(current => ({ ...current, revision: current.revision + 1 }));
     }
     return <main>
+        <p className="eyebrow">Operasyon</p>
         <h1>{title}</h1>
         <p>{fixedStatus ? "Dağıtımda olan gönderileri görüntüle. Teslim kaydı için gönderinin detayını açabilirsin." : "Gönderileri görüntüle ve mevcut durumlarına göre filtrele. En yeni kayıtlar önce gösterilir."}</p>
-        {!fixedStatus && <div className="registration-fields">
-            <label htmlFor="shipmentStatus">Gönderi durumu</label>
-            <select id="shipmentStatus" value={request.status} onChange={event => changeStatus(event.target.value)}>
-                <option value="">Tüm durumlar</option>
-                {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-        </div>}
-        {!fixedStatus && <button disabled={loading || request.status === "DELIVERED"}
-            onClick={() => changeStatus("DELIVERED")}>Teslim edilenleri göster</button>}
-        <button disabled={loading} onClick={retry}>Listeyi yenile</button>
+        <div className="toolbar">
+            {!fixedStatus && <div className="registration-fields">
+                <label htmlFor="shipmentStatus">Gönderi durumu</label>
+                <select id="shipmentStatus" value={request.status} onChange={event => changeStatus(event.target.value)}>
+                    <option value="">Tüm durumlar</option>
+                    {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+            </div>}
+            {!fixedStatus && <button disabled={loading || request.status === "DELIVERED"}
+                onClick={() => changeStatus("DELIVERED")}>Teslim edilenleri göster</button>}
+            <button disabled={loading} onClick={retry}>Listeyi yenile</button>
+        </div>
         {loading ? <p role="status">Gönderiler yükleniyor...</p>
             : error ? <div role="alert" className="error-box error-500"><p>{error}</p><button onClick={retry}>Tekrar dene</button></div>
                 : result && <>
-                    <p role="status">Toplam {result.totalElements} gönderi</p>
+                    <p role="status" className="count">Toplam <strong>{result.totalElements}</strong> gönderi</p>
                     {result.totalElements === 0 ? <p>{request.status ? "Bu durumda gönderi bulunamadı." : "Henüz gönderi kaydı yok."}</p> : <>
                         <div className="staff-table-container"><table>
                             <caption>{request.status ? statusLabels[request.status as keyof typeof statusLabels] : "Tüm durumlar"} — gönderi listesi</caption>
                             <thead><tr><th scope="col">Barkod</th><th scope="col">Gönderici</th><th scope="col">Alıcı</th><th scope="col">Durum</th><th scope="col">Ücret</th><th scope="col">Oluşturulma</th><th scope="col">İşlem</th></tr></thead>
                             <tbody>{result.content.map(shipment => <tr key={shipment.id}>
-                                <td>{shipment.barcode}</td>
+                                <td className="mono">{shipment.barcode}</td>
                                 <td>{fullName(shipment.senderName, shipment.senderSurname)}</td>
                                 <td>{fullName(shipment.receiverName, shipment.receiverSurname)}</td>
-                                <td>{statusLabels[shipment.status] ?? "Bilinmeyen durum"}</td>
+                                <td><StatusBadge status={shipment.status} /></td>
                                 <td>{shipment.price === null ? "—" : currency.format(shipment.price)}</td>
-                                <td>{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
-                                <td><Link href={`/operations/${shipment.id}`} aria-label={`${shipment.barcode} gönderisinin detayını görüntüle`}>Detayı görüntüle</Link></td>
+                                <td className="muted">{shipment.createdAt ? <time dateTime={shipment.createdAt}>{dateFormat.format(new Date(shipment.createdAt))}</time> : "—"}</td>
+                                <td><Link className="table-link" href={`/operations/${shipment.id}`} aria-label={`${shipment.barcode} gönderisinin detayını görüntüle`}>Detayı görüntüle <ArrowRightIcon /></Link></td>
                             </tr>)}</tbody>
                         </table></div>
-                        <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
-                        <span>Sayfa {result.number + 1} / {result.totalPages}</span>
-                        <button disabled={request.page + 1 >= result.totalPages} onClick={() => changePage(request.page + 1)}>Sonraki</button>
+                        <div className="pager">
+                            <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
+                            <span>Sayfa {result.number + 1} / {result.totalPages}</span>
+                            <button disabled={request.page + 1 >= result.totalPages} onClick={() => changePage(request.page + 1)}>Sonraki</button>
+                        </div>
                     </>}
                 </>}
     </main>;

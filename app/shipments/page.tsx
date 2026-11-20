@@ -5,6 +5,8 @@ import Link from "next/link";
 import axios from "axios";
 import api from "@/lib/api";
 import { hasSessionHint } from "@/lib/session";
+import { CheckCircleIcon, PackageIcon, PinIcon, SenderIcon } from "../components/icons";
+import styles from "./page.module.css";
 
 interface Sender { id: number; name: string; surname: string; active: boolean }
 interface User extends Sender { role: "USER" | "STAFF" | "ADMIN" }
@@ -20,18 +22,21 @@ const emptyAddress: ManualAddress = { cityId: "", districtId: "", address: "" };
 function AddressFields({ prefix, value, onChange, cities, districts }: {
     prefix: string; value: ManualAddress; onChange: (value: ManualAddress) => void; cities: City[]; districts: District[];
 }) {
-    return <>
+    return <div className={styles.fields}>
+        <div className={styles.pair}><div>
         <label htmlFor={`${prefix}-city`}>Şehir</label>
         <select id={`${prefix}-city`} required value={value.cityId} onChange={e => onChange({ ...value, cityId: e.target.value, districtId: "" })}>
             <option value="">Şehir seç</option>{cities.map(city => <option key={city.id} value={city.id}>{city.name}</option>)}
-        </select>
+        </select></div><div>
         <label htmlFor={`${prefix}-district`}>İlçe</label>
         <select id={`${prefix}-district`} required disabled={!value.cityId} value={value.districtId} onChange={e => onChange({ ...value, districtId: e.target.value })}>
             <option value="">İlçe seç</option>{districts.filter(d => String(d.city.id) === value.cityId).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
+        </select></div></div>
+        <div>
         <label htmlFor={`${prefix}-address`}>Açık adres</label>
         <textarea id={`${prefix}-address`} required value={value.address} onChange={e => onChange({ ...value, address: e.target.value })} />
-    </>;
+        </div>
+    </div>;
 }
 export default function ShipmentPage() {
     return <Suspense fallback={<main><p role="status">Gönderi formu yükleniyor...</p></main>}><ShipmentRoute /></Suspense>;
@@ -147,42 +152,80 @@ function ShipmentForm({ requestedSenderId }: { requestedSenderId: number | null 
     }
     if (loading) return <main><p role="status">Gönderi formu yükleniyor...</p></main>;
     if (!user || !selectedSender) return <main><p role="alert">{error}</p><Link href="/profile">Profilime dön</Link></main>;
-    if (created) return <main><h1>Gönderi oluşturuldu</h1><p role="status">Gönderin kaydedildi.</p>
-        <p>Takip numarası (barkod): <strong>{created.barcode}</strong></p>
-        <p>Kargo ücreti: {formatPrice(created.price)}</p>
-        {onBehalf ? <><p>Gönderici: {selectedSender.name} {selectedSender.surname}. Gönderi müşterinin kendi listesinde görünecek.</p><Link href="/users">Müşterilere dön</Link></>
-            : <Link href={`/users/${user.id}`}>Gönderilerimi görüntüle</Link>}</main>;
-    return <main><h1>{onBehalf ? "Müşteri Adına Gönderi Oluştur" : "Gönderi Oluştur"}</h1><form onSubmit={handleSubmit}>
-        <fieldset disabled={saving || calculating} className="registration-fields">
-            <h2>Gönderici</h2><p>{selectedSender.name} {selectedSender.surname}</p>
-            {onBehalf && <p>Seçilen müşteri ID: {selectedSender.id}. <Link href="/users">Başka müşteri seç</Link></p>}
-            <label htmlFor="senderAddressId">Gönderici adresi</label>
-            <select id="senderAddressId" value={senderAddressId} onChange={e => setSenderAddressId(e.target.value)}>
-                <option value="">Adresi elle gir</option>{addresses.map(address => <option key={address.id} value={address.id}>
-                    {address.city.name} / {address.district.name} — {address.neighborhood}</option>)}
-            </select>
-            {!addresses.length && (onBehalf ? <p>Müşterinin kayıtlı adresi yok. Gönderici adresini elle girebilirsin.</p>
-                : <p>Kayıtlı adresin yok. Adresi elle girebilir veya <Link href="/addresses">adres ekleyebilirsin</Link>.</p>)}
-            {!senderAddressId && <AddressFields prefix="sender" value={sender} onChange={setSender} cities={cities} districts={districts} />}
-            <h2>Alıcı</h2><label htmlFor="receiverName">Ad</label>
-            <input id="receiverName" required value={receiverName} onChange={e => setReceiverName(e.target.value)} />
-            <label htmlFor="receiverSurname">Soyad</label><input id="receiverSurname" required value={receiverSurname} onChange={e => setReceiverSurname(e.target.value)} />
-            <AddressFields prefix="receiver" value={receiver} onChange={setReceiver} cities={cities} districts={districts} />
-            <h2>Ölçüler</h2>
-            {([['width', 'En (cm)'], ['length', 'Boy (cm)'], ['height', 'Yükseklik (cm)'], ['weight', 'Ağırlık (kg)']] as const).map(([field, label]) => <div key={field}>
-                <label htmlFor={field}>{label}</label><input id={field} type="number" required min="0.01" step="0.01" value={shipment[field]}
-                    onChange={e => setShipment({ ...shipment, [field]: e.target.value })} />
-            </div>)}
-            <button type="button" onClick={calculatePrice}>{calculating ? "Hesaplanıyor..." : "Fiyatı hesapla"}</button>
-            {priceError && <p role="alert">{priceError}</p>}
-            {currentPreview && <div role="status">
-                <p>Önizleme ücreti: {formatPrice(currentPreview.price)}</p>
-                <p>Desi: {currentPreview.desi} — Ücrete esas değer: {currentPreview.calculatedValue}</p>
-                <p>Hesaplama türü: {currentPreview.calculatedBy === "DESI" ? "Desi" : currentPreview.calculatedBy === "WEIGHT" ? "Ağırlık" : currentPreview.calculatedBy}</p>
-                <p>Gönderi kaydedilirken ücret backend tarafından yeniden hesaplanır.</p>
-            </div>}
-            {preview && !currentPreview && <p>Ölçüler değişti. Güncel fiyat için tekrar hesapla.</p>}
-            {error && <p role="alert" className="deleteError">{error}</p>}
-            <button type="submit">{saving ? "Kaydediliyor..." : "Gönderi oluştur"}</button>
-        </fieldset></form></main>;
+    if (created) return <main className={styles.created}>
+        <span className={styles.createdIcon} aria-hidden="true"><CheckCircleIcon /></span>
+        <h1>Gönderi oluşturuldu</h1>
+        <p role="status">Gönderin kaydedildi.</p>
+        <dl className={styles.createdFacts}>
+            <div><dt>Takip numarası (barkod)</dt><dd className="mono">{created.barcode}</dd></div>
+            <div><dt>Kargo ücreti</dt><dd>{formatPrice(created.price)}</dd></div>
+        </dl>
+        {onBehalf ? <><p>Gönderici: {selectedSender.name} {selectedSender.surname}. Gönderi müşterinin kendi listesinde görünecek.</p><Link className="button-primary" href="/users">Müşterilere dön</Link></>
+            : <Link className="button-primary" href={`/users/${user.id}`}>Gönderilerimi görüntüle</Link>}
+    </main>;
+    const calculatedBy = currentPreview?.calculatedBy === "DESI" ? "Desi" : currentPreview?.calculatedBy === "WEIGHT" ? "Ağırlık" : currentPreview?.calculatedBy;
+    return <main>
+        <div className="page-head"><div>
+            <p className="eyebrow">{onBehalf ? "Müşteri adına" : "Yeni gönderi"}</p>
+            <h1>{onBehalf ? "Müşteri Adına Gönderi Oluştur" : "Gönderi Oluştur"}</h1>
+            <p>Gönderici ve alıcı bilgilerini gir, paket ölçüleriyle ücreti hesapla.</p>
+        </div></div>
+        <form onSubmit={handleSubmit}><fieldset disabled={saving || calculating} className={styles.form}>
+            <div className={styles.mainColumn}>
+                <div className={styles.parties}>
+                    <section className={styles.section} aria-labelledby="sender-title">
+                        <h2 id="sender-title"><span className={styles.icon}><SenderIcon /></span>Gönderici</h2>
+                        <p className={styles.person}>{selectedSender.name} {selectedSender.surname}</p>
+                        {onBehalf && <p className={styles.help}>Seçilen müşteri ID: {selectedSender.id}. <Link href="/users">Başka müşteri seç</Link></p>}
+                        <div className={styles.fields}><div>
+                            <label htmlFor="senderAddressId">Gönderici adresi</label>
+                            <select id="senderAddressId" value={senderAddressId} onChange={e => setSenderAddressId(e.target.value)}>
+                                <option value="">Adresi elle gir</option>{addresses.map(address => <option key={address.id} value={address.id}>
+                                    {address.city.name} / {address.district.name} — {address.neighborhood}</option>)}
+                            </select>
+                        </div></div>
+                        {!addresses.length && (onBehalf ? <p className={styles.help}>Müşterinin kayıtlı adresi yok. Gönderici adresini elle girebilirsin.</p>
+                            : <p className={styles.help}>Kayıtlı adresin yok. Adresi elle girebilir veya <Link href="/addresses">adres ekleyebilirsin</Link>.</p>)}
+                        {!senderAddressId && <AddressFields prefix="sender" value={sender} onChange={setSender} cities={cities} districts={districts} />}
+                    </section>
+                    <section className={styles.section} aria-labelledby="receiver-title">
+                        <h2 id="receiver-title"><span className={styles.icon}><PinIcon /></span>Alıcı</h2>
+                        <div className={styles.fields}><div className={styles.pair}>
+                            <div><label htmlFor="receiverName">Ad</label>
+                                <input id="receiverName" required value={receiverName} onChange={e => setReceiverName(e.target.value)} /></div>
+                            <div><label htmlFor="receiverSurname">Soyad</label>
+                                <input id="receiverSurname" required value={receiverSurname} onChange={e => setReceiverSurname(e.target.value)} /></div>
+                        </div></div>
+                        <AddressFields prefix="receiver" value={receiver} onChange={setReceiver} cities={cities} districts={districts} />
+                    </section>
+                </div>
+                <section className={styles.section} aria-labelledby="size-title">
+                    <h2 id="size-title"><span className={styles.icon}><PackageIcon /></span>Paket ölçüleri</h2>
+                    <div className={styles.measures}>
+                        {([['width', 'En (cm)'], ['length', 'Boy (cm)'], ['height', 'Yükseklik (cm)'], ['weight', 'Ağırlık (kg)']] as const).map(([field, label]) => <div key={field}>
+                            <label htmlFor={field}>{label}</label><input id={field} type="number" required min="0.01" step="0.01" value={shipment[field]}
+                                onChange={e => setShipment({ ...shipment, [field]: e.target.value })} />
+                        </div>)}
+                    </div>
+                </section>
+            </div>
+            <aside className={styles.summary} aria-labelledby="summary-title">
+                <h2 id="summary-title">Ücret özeti</h2>
+                {currentPreview ? <div role="status" className={styles.quote}>
+                    <span>Önizleme ücreti</span>
+                    <strong>{formatPrice(currentPreview.price)}</strong>
+                    <dl>
+                        <div><dt>Desi</dt><dd>{currentPreview.desi}</dd></div>
+                        <div><dt>Ücrete esas değer</dt><dd>{currentPreview.calculatedValue}</dd></div>
+                        <div><dt>Hesaplama türü</dt><dd>{calculatedBy}</dd></div>
+                    </dl>
+                </div> : <p className={styles.empty}>{preview ? "Ölçüler değişti. Güncel fiyat için tekrar hesapla." : "Ölçüleri girip fiyatı hesapla."}</p>}
+                <button type="button" onClick={calculatePrice}>{calculating ? "Hesaplanıyor..." : "Fiyatı hesapla"}</button>
+                {priceError && <p role="alert" className="error-box error-400">{priceError}</p>}
+                {error && <p role="alert" className="deleteError">{error}</p>}
+                <button type="submit">{saving ? "Kaydediliyor..." : "Gönderi oluştur"}</button>
+                <p className={styles.help}>Gönderi kaydedilirken ücret backend tarafından yeniden hesaplanır.</p>
+            </aside>
+        </fieldset></form>
+    </main>;
 }

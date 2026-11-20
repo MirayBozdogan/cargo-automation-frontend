@@ -3,6 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
+import { PinIcon } from "../components/icons";
+import styles from "./page.module.css";
 import { hasSessionHint } from "@/lib/session";
 
 type Location = { id: number; name: string };
@@ -65,18 +67,25 @@ export default function AddressesPage() {
         finally { setSaving(false); }
     }
     return <main>
+        <p className="eyebrow">Hesabım</p>
         <h1>Adreslerim</h1>
+        <p>Gönderi oluştururken kayıtlı adreslerinden birini seçebilirsin.</p>
         {loading && <p role="status">Adresler yükleniyor...</p>}
         {error && <p role="alert" className="deleteError">{error}</p>}
-        {!loading && userId !== null && <>
-            {addresses.length === 0 ? <p>Henüz kayıtlı adresin yok. Aşağıdaki formdan adres ekleyebilirsin.</p>
-                : <ul>{addresses.map(address => <li key={address.id}>
-                    {address.city.name} / {address.district.name} — {address.neighborhood}
+        {!loading && userId !== null && <div className={styles.layout}>
+            <section aria-labelledby="saved-addresses">
+            <h2 id="saved-addresses" className={styles.title}>Kayıtlı adresler</h2>
+            {addresses.length === 0 ? <p className={styles.empty}>Henüz kayıtlı adresin yok. Yandaki formdan adres ekleyebilirsin.</p>
+                : <ul className={styles.list}>{addresses.map(address => <li key={address.id}>
+                    <span className={styles.icon} aria-hidden="true"><PinIcon /></span>
+                    <span><strong>{address.city.name} / {address.district.name}</strong><br /><span className="muted">{address.neighborhood}
                     {address.buildingNo !== null && `, Bina No: ${address.buildingNo}`}
-                    {address.apartmentNo !== null && `, Daire No: ${address.apartmentNo}`}
+                    {address.apartmentNo !== null && `, Daire No: ${address.apartmentNo}`}</span></span>
                 </li>)}</ul>}
-            <h2>Yeni adres ekle</h2>
-            {success && <p role="status">{success}</p>}
+            </section>
+            <section aria-labelledby="new-address" className={styles.formCard}>
+            <h2 id="new-address" className={styles.title}>Yeni adres ekle</h2>
+            {success && <p role="status" className="notice-success">{success}</p>}
             <form onSubmit={handleSubmit}>
                 <fieldset disabled={saving} className="registration-fields">
                     <label htmlFor="cityId">Şehir</label>
@@ -104,6 +113,7 @@ export default function AddressesPage() {
                     <button type="submit" disabled={saving || districtsLoading || !form.districtId}>{saving ? "Kaydediliyor..." : "Adresi kaydet"}</button>
                 </fieldset>
             </form>
-        </>}
+            </section>
+        </div>}
     </main>;
 }

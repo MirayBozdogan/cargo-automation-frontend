@@ -1,0 +1,23 @@
+.hero { display: flex; align-items: center; gap: 18px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
+.hero .name { margin: 0; color: var(--navy); font-size: 24px; font-weight: 700; letter-spacing: -.4px; }
+.hero :global(.eyebrow) { margin-bottom: 4px; }
+.meta { margin: 2px 0 0; color: var(--muted); }
+.role { color: var(--teal); font-weight: 600; }
+.avatar { display: grid; place-items: center; flex: none; width: 64px; height: 64px; border-radius: 50%; color: #fff; background: var(--teal); font-size: 22px; font-weight: 700; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.card h2 { margin-top: 0; }
+.card dl { max-width: none; }
+.actions { display: grid; gap: 12px; }
+.tile { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; transition: border-color .15s, background-color .15s; }
+.tile:hover { border-color: #9cc5bf; background: #f6fbfa; }
+.tile p { display: flex; flex-direction: column; margin: 0; }
+.tile a { color: var(--navy); font-weight: 650; text-decoration: none; }
+/* Tüm kutu tıklanabilir; erişilebilir ad yalnız bağlantı metnidir. */
+.tile a::after { content: ""; position: absolute; inset: 0; border-radius: 14px; }
+.tile a:focus-visible { outline: none; }
+.tile:has(a:focus-visible) { outline: 3px solid #2aa596; outline-offset: 2px; }
+.tile span:not(.tileIcon) { color: var(--muted); font-size: 13.5px; }
+.tileIcon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 11px; color: var(--teal); background: var(--teal-soft); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .tile { transition: none; } }

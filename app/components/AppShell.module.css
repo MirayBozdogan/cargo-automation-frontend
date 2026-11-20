@@ -1,0 +1,9 @@
+.standard { min-height: 100dvh; }
+.operator { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100dvh; }
+.content { min-width: 0; }
+.skip { position: absolute; left: 12px; top: -48px; z-index: 50; padding: 8px 14px; border-radius: 8px; background: var(--navy); color: #fff; font-weight: 600; }
+.skip:focus { top: 12px; }
+
+@media (max-width: 900px) {
+  .operator { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+}

@@ -53,9 +53,12 @@ export default function CourierAssignment({ busy, onAssign }: { busy: boolean; o
                     </fieldset>
                 </form>
                 <div className="staff-actions">
-                    <button disabled={busy || request.page === 0} onClick={() => reload(request.page - 1)}>Önceki personeller</button>
-                    <span>Personel sayfası {result.number + 1} / {result.totalPages}</span>
-                    <button disabled={busy || request.page + 1 >= result.totalPages} onClick={() => reload(request.page + 1)}>Sonraki personeller</button>
+                    {/* Sayfalama yalnız birden fazla personel sayfası varsa gösterilir. */}
+                    {result.totalPages > 1 && <>
+                        <button disabled={busy || request.page === 0} onClick={() => reload(request.page - 1)}>Önceki personeller</button>
+                        <span>Personel sayfası {result.number + 1} / {result.totalPages}</span>
+                        <button disabled={busy || request.page + 1 >= result.totalPages} onClick={() => reload(request.page + 1)}>Sonraki personeller</button>
+                    </>}
                     <button disabled={busy} onClick={() => reload(request.page)}>Personelleri yenile</button>
                 </div>
             </>)}

@@ -72,36 +72,41 @@ function CustomerList() {
         setLoading(true); setError(""); setRequest(current => ({ ...current, revision: current.revision + 1 }));
     }
     return <main>
+        <p className="eyebrow">Operasyon</p>
         <h1>Müşteriler</h1>
         <p>Ad, soyad, e-posta veya telefonla ara. Birden fazla alan doldurursan tüm koşulları karşılayan müşteriler gösterilir.</p>
         <form onSubmit={search}>
-            <fieldset disabled={loading} className="registration-fields">
+            <fieldset disabled={loading} className="filter-panel">
                 <legend>Müşteri ara</legend>
-                <label htmlFor="customerName">Ad</label><input id="customerName" maxLength={100} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-                <label htmlFor="customerSurname">Soyad</label><input id="customerSurname" maxLength={100} value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
-                <label htmlFor="customerEmail">E-posta</label><input id="customerEmail" type="text" inputMode="email" maxLength={100} placeholder="E-postanın bir bölümünü yazabilirsin" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                <label htmlFor="customerPhone">Telefon</label><input id="customerPhone" type="tel" maxLength={100} value={form.telNo} onChange={e => setForm({ ...form, telNo: e.target.value })} />
-                <label htmlFor="customerActive">Hesap durumu</label><select id="customerActive" value={form.active} onChange={e => setForm({ ...form, active: e.target.value })}>
-                    <option value="">Tümü</option><option value="true">Aktif</option><option value="false">Pasif</option>
-                </select>
-                <div><button type="submit">Ara</button><button type="button" onClick={reset}>Filtreleri temizle</button></div>
+                <div className="filter-grid">
+                    <div><label htmlFor="customerName">Ad</label><input id="customerName" maxLength={100} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                    <div><label htmlFor="customerSurname">Soyad</label><input id="customerSurname" maxLength={100} value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} /></div>
+                    <div><label htmlFor="customerEmail">E-posta</label><input id="customerEmail" type="text" inputMode="email" maxLength={100} placeholder="E-postanın bir bölümünü yazabilirsin" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+                    <div><label htmlFor="customerPhone">Telefon</label><input id="customerPhone" type="tel" maxLength={100} value={form.telNo} onChange={e => setForm({ ...form, telNo: e.target.value })} /></div>
+                    <div><label htmlFor="customerActive">Hesap durumu</label><select id="customerActive" value={form.active} onChange={e => setForm({ ...form, active: e.target.value })}>
+                        <option value="">Tümü</option><option value="true">Aktif</option><option value="false">Pasif</option>
+                    </select></div>
+                </div>
+                <div className="filter-actions"><button type="submit">Ara</button><button type="button" onClick={reset}>Filtreleri temizle</button></div>
             </fieldset>
         </form>
         {loading ? <p role="status">Müşteriler yükleniyor...</p> : error ? <div role="alert"><p>{error}</p><button onClick={retry}>Tekrar dene</button></div>
             : result && <>
                 {result.totalElements === 0 ? <p>{Object.keys(request.filters).length ? "Aramana uygun müşteri bulunamadı." : "Henüz müşteri kaydı yok."}</p> : <>
-                    <p role="status">Toplam {result.totalElements} müşteri</p>
+                    <p role="status" className="count">Toplam <strong>{result.totalElements}</strong> müşteri</p>
                     <div className="staff-table-container"><table>
                         <caption>Müşteri listesi</caption>
                         <thead><tr><th>ID</th><th>Ad</th><th>Soyad</th><th>E-posta</th><th>Telefon</th><th>Yaş</th><th>Durum</th><th>İşlem</th></tr></thead>
                         <tbody>{result.content.map(user => <tr key={user.id}>
-                            <td>{user.id}</td><td>{user.name}</td><td>{user.surname}</td><td>{user.email}</td><td>{user.telNo}</td><td>{user.age}</td><td>{user.active ? "Aktif" : "Pasif"}</td>
-                            <td>{user.active ? <Link href={`/shipments?senderId=${user.id}`}>Adına gönderi oluştur</Link> : "Pasif hesap"}</td>
+                            <td className="muted">{user.id}</td><td>{user.name}</td><td>{user.surname}</td><td>{user.email}</td><td>{user.telNo}</td><td>{user.age}</td><td><span className={`pill ${user.active ? "pill-active" : "pill-passive"}`}>{user.active ? "Aktif" : "Pasif"}</span></td>
+                            <td>{user.active ? <Link className="table-link" href={`/shipments?senderId=${user.id}`}>Adına gönderi oluştur</Link> : <span className="muted">Pasif hesap</span>}</td>
                         </tr>)}</tbody>
                     </table></div>
-                    <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
-                    <span>Sayfa {result.number + 1} / {result.totalPages}</span>
-                    <button disabled={request.page + 1 >= result.totalPages} onClick={() => changePage(request.page + 1)}>Sonraki</button>
+                    <div className="pager">
+                        <button disabled={request.page === 0} onClick={() => changePage(request.page - 1)}>Önceki</button>
+                        <span>Sayfa {result.number + 1} / {result.totalPages}</span>
+                        <button disabled={request.page + 1 >= result.totalPages} onClick={() => changePage(request.page + 1)}>Sonraki</button>
+                    </div>
                 </>}
             </>}
     </main>;

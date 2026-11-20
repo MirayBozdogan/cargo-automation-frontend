@@ -5,6 +5,9 @@ export const statusLabels = {
     OUT_FOR_DELIVERY: "Dağıtımda",
     DELIVERED: "Teslim edildi",
 } as const;
+export type ShipmentStatus = keyof typeof statusLabels;
+// Backend'deki geçiş sırasıyla aynıdır: CREATED → … → DELIVERED.
+export const statusOrder = Object.keys(statusLabels) as ShipmentStatus[];
 export const currency = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
 export const dateFormat = new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Istanbul" });
 export function fullName(name: string | null, surname: string | null) {
