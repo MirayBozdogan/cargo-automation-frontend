@@ -71,6 +71,8 @@ Staff/admin create a shipment for a customer from Müşteriler → Adına gönde
 
 Profilim → Bilgilerimi düzenle opens the own-profile edit route `/users/{id}/edit`. It sends only editable fields. An email change requires signing in again because the JWT subject is the email.
 
+Profilim → Şifremi değiştir opens `/profile/password`. The form asks for the current password and the new password twice; the repeat field is checked in the browser and is not sent. The user stays signed in after the change.
+
 ## Shipment flow
 
 ```text

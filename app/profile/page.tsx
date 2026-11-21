@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../components/AuthProvider";
-import { BadgeIcon, PackageIcon, PinIcon, SenderIcon } from "../components/icons";
+import { BadgeIcon, LockIcon, PackageIcon, PinIcon, SenderIcon } from "../components/icons";
 import styles from "./page.module.css";
 
 export default function ProfilePage() {
@@ -41,6 +41,8 @@ export default function ProfilePage() {
                 <nav className={styles.actions} aria-label="Hesap işlemleri">
                     <div className={styles.tile}><span className={styles.tileIcon} aria-hidden="true"><SenderIcon /></span>
                         <p><Link href={`/users/${user.id}/edit`}>Bilgilerimi düzenle</Link><span>Ad, e-posta ve telefon bilgilerini güncelle.</span></p></div>
+                    <div className={styles.tile}><span className={styles.tileIcon} aria-hidden="true"><LockIcon /></span>
+                        <p><Link href="/profile/password">Şifremi değiştir</Link><span>Mevcut şifrenle doğrulayıp yeni şifre belirle.</span></p></div>
                     <div className={styles.tile}><span className={styles.tileIcon} aria-hidden="true"><PackageIcon /></span>
                         <p><Link href={`/users/${user.id}`}>Gönderilerim</Link><span>Gönderdiğin ve sana gelen kargolar.</span></p></div>
                     <div className={styles.tile}><span className={styles.tileIcon} aria-hidden="true"><PinIcon /></span>

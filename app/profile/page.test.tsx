@@ -24,6 +24,7 @@ describe("profil ekranı", () => {
         render(<ProfilePage />);
         expect(screen.getByRole("link", { name: "Bilgilerimi düzenle" }).getAttribute("href")).toBe("/users/5/edit");
         expect(screen.getByRole("link", { name: "Gönderilerim" }).getAttribute("href")).toBe("/users/5");
+        expect(screen.getByRole("link", { name: "Şifremi değiştir" }).getAttribute("href")).toBe("/profile/password");
     });
 
     test("personel yönetimi bağlantısı yalnız yöneticiye görünür", () => {

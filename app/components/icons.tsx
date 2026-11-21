@@ -22,3 +22,4 @@ export const LogoutIcon = () => <Svg size={16}><path d="M14 4h4.5a1.5 1.5 0 0 1 
 export const MenuIcon = () => <Svg><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
 export const ArrowLeftIcon = () => <Svg size={16}><path d="M19 12H5M11 6l-6 6 6 6" /></Svg>;
 export const ArrowRightIcon = () => <Svg size={16}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
+export const LockIcon = () => <Svg><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" /></Svg>;
