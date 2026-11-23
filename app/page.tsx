@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/api";
@@ -48,6 +49,7 @@ function LoginForm() {
                 <label htmlFor="loginPassword">Şifre</label>
                 <input id="loginPassword" type="password" autoComplete="current-password" required
                     placeholder="Şifre" value={password} onChange={e => setPassword(e.target.value)} />
+                <p className="auth-forgot"><Link href="/forgot-password">Şifremi unuttum</Link></p>
                 {error && <p role="alert" className="deleteError">{error}</p>}
                 <button className="button-primary" type="submit" disabled={isSubmitting}>
                     {isSubmitting ? "Giriş yapılıyor..." : "Giriş Yap"}

@@ -55,6 +55,8 @@ There is no default shared account. Customers register through Kayıt Ol. To use
 | Screen | Route | Access / behavior |
 | --- | --- | --- |
 | Login / registration | `/`, `/register` | Public; registration creates a customer |
+| Password reset | `/forgot-password`, `/reset-password` | Public; request a reset link and set a new password with it |
+| Change password | `/profile/password` | Signed-in account; requires the current password |
 | Profile | `/profile` | Current account; entry point to Adreslerim |
 | Addresses | `/addresses` | Own address list and creation |
 | Own shipments | `/users/{id}` | Current user's sent/received shipments, dates and prices |
@@ -87,7 +89,7 @@ The price preview uses the backend calculation, and saving recalculates the pric
 
 The backend stores the JWT in an `HttpOnly` cookie on login, so page JavaScript cannot read it; the Axios client sends it with `withCredentials`. The browser keeps only a non-secret `signedIn` marker in localStorage to skip the session check for visitors who never signed in. The shared AuthProvider reads `/users/me` for the current account and role. A rejected/expired session clears the marker and returns to login; Çıkış yap asks the backend to expire the cookie. Server-side authorization remains authoritative even when a menu link is hidden.
 
-There is no password-reset or email-verification flow in the current version.
+Şifremi unuttum on the login screen opens `/forgot-password`. It always shows the same message, whether or not the address has an account. The emailed link opens `/reset-password?token=...`; the link is valid for 30 minutes and only once, and a successful reset ends every open session of the account. Locally the emails are caught by Mailpit (see the backend README). There is no email-verification flow in the current version.
 
 ## Checks and production build
 

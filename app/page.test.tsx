@@ -23,6 +23,11 @@ describe("giriş ekranı", () => {
     beforeEach(() => { searchParams = new URLSearchParams(); });
     afterEach(() => { cleanup(); localStorage.clear(); post.mockReset(); router.replace.mockReset(); });
 
+    test("şifremi unuttum bağlantısını gösterir", () => {
+        render(<LoginPage />);
+        expect(screen.getByRole("link", { name: "Şifremi unuttum" }).getAttribute("href")).toBe("/forgot-password");
+    });
+
     test("başarılı girişte token saklamaz, oturum işareti koyup profile gider", async () => {
         post.mockResolvedValue({ data: { message: "Giriş başarılı." } });
         render(<LoginPage />);

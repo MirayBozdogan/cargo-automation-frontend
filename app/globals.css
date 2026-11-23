@@ -153,6 +153,8 @@ main.auth-layout { display: grid; grid-template-columns: .95fr 1.05fr; max-width
 .auth-panel h1 { font-size: 29px; margin-bottom: 12px; }
 .auth-description { color: var(--muted); margin-bottom: 26px; font-size: 14px; }
 .auth-panel .registration-fields { max-width: none; }
+.auth-forgot { margin: 0; text-align: right; font-size: 13.5px; }
+.auth-forgot a { color: var(--teal); font-weight: 600; }
 .auth-footer { padding-top: 20px; margin-bottom: 0; text-align: center; color: var(--muted); font-size: 14px; }
 .auth-footer a { font-weight: 600; }
 
