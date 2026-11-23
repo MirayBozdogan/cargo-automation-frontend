@@ -31,7 +31,7 @@ describe("şifre değiştirme ekranı", () => {
         put.mockResolvedValue({ data: { message: "Şifreniz değiştirildi." } });
         render(<ChangePasswordPage />);
         fill("eski-sifre-1", "yeni-sifre-2", "yeni-sifre-2");
-        expect(await screen.findByText(/Şifren değiştirildi/)).toBeTruthy();
+        expect(await screen.findByText(/Şifren değiştirildi. Diğer cihazlardaki oturumların kapatıldı/)).toBeTruthy();
         expect(put).toHaveBeenCalledWith("/users/me/password", { currentPassword: "eski-sifre-1", newPassword: "yeni-sifre-2" });
         expect((screen.getByLabelText("Mevcut şifre") as HTMLInputElement).value).toBe("");
     });

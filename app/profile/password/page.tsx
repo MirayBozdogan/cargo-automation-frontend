@@ -42,9 +42,9 @@ export default function ChangePasswordPage() {
 
     return <main>
         <h1>Şifremi değiştir</h1>
-        <p>Güvenliğin için önce mevcut şifreni gir. Yeni şifre en az 6 karakter olmalı.</p>
+        <p>Güvenliğin için önce mevcut şifreni gir. Yeni şifre en az 6 karakter olmalı. Şifre değişince diğer cihazlardaki oturumların kapanır.</p>
         {error && <p role="alert" className="error-box">{error}</p>}
-        {done && <p role="status" className="notice-success">Şifren değiştirildi. Bir sonraki girişte yeni şifreni kullan.</p>}
+        {done && <p role="status" className="notice-success">Şifren değiştirildi. Diğer cihazlardaki oturumların kapatıldı; bu cihazda oturumun açık kalıyor.</p>}
         <form onSubmit={handleSubmit}><fieldset disabled={saving} className="registration-fields">
             <label htmlFor="currentPassword">Mevcut şifre</label>
             <input id="currentPassword" type="password" autoComplete="current-password" required
